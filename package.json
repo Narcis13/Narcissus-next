@@ -1,0 +1,41 @@
+{
+  "name": "nextproject",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run gen-indexes && next dev -p 3013",
+    "build": "npm run gen-indexes && next build",
+    "start": "next start -p 3013",
+    "lint": "next lint",
+    "gen-indexes": "node scripts/generate-indexes.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:push": "drizzle-kit push",
+    "db:fix-migration-state": "tsx src/db/fix-migration-state.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "drizzle-kit": "^0.31.1",
+    "drizzle-orm": "^0.44.2",
+    "googleapis": "^135.1.0",
+    "next": "15.3.1",
+    "postgres": "^3.4.7",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/glob": "^8.1.0",
+    "@types/node": "^20",
+    "@types/pg": "^8.15.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
+    "dotenv": "^16.5.0",
+    "glob": "^11.0.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.3",
+    "typescript": "^5"
+  }
+}
