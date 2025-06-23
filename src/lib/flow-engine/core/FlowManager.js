@@ -278,11 +278,28 @@ export function FlowManager({
               index: currentIndex - 1,
               definition: currentNode
           };
+          
+          // Handle case where definition is a function or can't be serialized
+          let serializedDefinition;
+          try {
+              if (typeof emittingNodeMeta.definition === 'function') {
+                  serializedDefinition = {
+                      type: 'function',
+                      name: emittingNodeMeta.definition.name || 'anonymous',
+                      toString: emittingNodeMeta.definition.toString()
+                  };
+              } else {
+                  serializedDefinition = JSON.parse(JSON.stringify(emittingNodeMeta.definition));
+              }
+          } catch (e) {
+              serializedDefinition = { type: 'unserializable', error: e.message };
+          }
+          
           emitToAllChannels('flowManagerNodeEvent', {
               flowInstanceId: this.flowInstanceId,
               emittingNode: {
                   index: emittingNodeMeta.index,
-                  definition: JSON.parse(JSON.stringify(emittingNodeMeta.definition))
+                  definition: serializedDefinition
               },
               customEventName: customEventName,
               eventData: data,

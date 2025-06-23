@@ -7,6 +7,9 @@
     "build": "npm run gen-indexes && next build",
     "start": "next start -p 3013",
     "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "gen-indexes": "node scripts/generate-indexes.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
@@ -26,7 +29,10 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/glob": "^8.1.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/pg": "^8.15.4",
     "@types/react": "^19",
@@ -34,7 +40,10 @@
     "@types/ws": "^8.18.1",
     "dotenv": "^16.5.0",
     "glob": "^11.0.3",
+    "jest": "^30.0.2",
+    "jest-environment-jsdom": "^30.0.2",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.0",
     "tsx": "^4.20.3",
     "typescript": "^5"
   }
