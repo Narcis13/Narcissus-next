@@ -496,16 +496,20 @@ export function FlowManager({
         output = { edges: ['pass'], results: [returnedValue] };
       }
     } else if (typeof returnedValue === 'object' && returnedValue !== null) {
-      const edgeFunctions = {};
-      const edgeNames = [];
-      Object.keys(returnedValue).forEach(key => {
-        if (typeof returnedValue[key] === 'function') {
-          edgeNames.push(key);
-          edgeFunctions[key] = returnedValue[key];
-        }
-      });
+      // Check if the object already has edges property (standard output format)
+      if (Array.isArray(returnedValue.edges)) {
+        output = returnedValue;
+      } else {
+        const edgeFunctions = {};
+        const edgeNames = [];
+        Object.keys(returnedValue).forEach(key => {
+          if (typeof returnedValue[key] === 'function') {
+            edgeNames.push(key);
+            edgeFunctions[key] = returnedValue[key];
+          }
+        });
 
-      if (edgeNames.length > 0) {
+        if (edgeNames.length > 0) {
         const results = [];
         for (const k of edgeNames) {
           try {
@@ -522,8 +526,9 @@ export function FlowManager({
           edges: edgeNames,
           results: results
         };
-      } else {
-        output = { edges: ['pass'], results: [returnedValue] };
+        } else {
+          output = { edges: ['pass'], results: [returnedValue] };
+        }
       }
     } else if (typeof returnedValue === 'string') {
       output = { edges: [returnedValue], results: [returnedValue] }; // <<< MODIFIED to include results
@@ -588,7 +593,21 @@ export function FlowManager({
 
       lastLoopIterationOutput = controllerOutput;
 
-      if (controllerOutput.edges.includes('exit') || controllerOutput.edges.includes('exit_forced')) {
+      // Check if the controller returned an exit edge
+      // The actual return value is in results[0] if it's an object with edges
+      let shouldExit = false;
+      if (controllerOutput.edges && (controllerOutput.edges.includes('exit') || controllerOutput.edges.includes('exit_forced'))) {
+        shouldExit = true;
+      } else if (controllerOutput.results && controllerOutput.results.length > 0) {
+        const controllerResult = controllerOutput.results[0];
+        if (controllerResult && typeof controllerResult === 'object' && controllerResult.edges) {
+          if (controllerResult.edges.includes('exit') || controllerResult.edges.includes('exit_forced')) {
+            shouldExit = true;
+          }
+        }
+      }
+
+      if (shouldExit) {
         break;
       }
 
@@ -711,7 +730,7 @@ export function FlowManager({
               const branchResultSteps = await branchFM.run();
               fmState.set(null, branchFM.getStateManager().getState());
               output = branchResultSteps?.at(-1)?.output || { edges: ['pass'] };
-              subStepsToRecord = branchResultSteps;
+              subStepsToRecord = branchResultSteps || [];
               branchTaken = true;
               break;
             }
@@ -734,7 +753,11 @@ export function FlowManager({
       output = { ...(output || {}), edges: ['pass'] };
     }
 
-    steps.push({ node: nodeToRecord, output, ...(subStepsToRecord && { subSteps: subStepsToRecord }) });
+    steps.push({ 
+      node: nodeToRecord, 
+      output, 
+      ...(subStepsToRecord !== null && subStepsToRecord !== undefined ? { subSteps: subStepsToRecord } : {}) 
+    });
 
     emitToAllChannels('flowManagerStep', {
       flowInstanceId: flowInstanceId,

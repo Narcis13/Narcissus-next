@@ -153,9 +153,16 @@ describe('FlowManager - Advanced Features', () => {
 
       // Should stop at 100 iterations
       const iterationSteps = steps[0].subSteps.filter(s => 
-        s.nodeDetail && s.nodeDetail.includes('Iter')
+        s.nodeDetail && s.nodeDetail.includes('Loop Iter')
       );
-      expect(iterationSteps.length).toBeLessThanOrEqual(200); // Controller + Actions per iteration
+      // Expect 200 iteration steps (100 controller + 100 actions)
+      expect(iterationSteps.length).toBe(200);
+      
+      // Should have a max iterations reached step
+      const maxIterStep = steps[0].subSteps.find(s => 
+        s.nodeDetail && s.nodeDetail.includes('Max Iterations Reached')
+      );
+      expect(maxIterStep).toBeDefined();
     });
   });
 
