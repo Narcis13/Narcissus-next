@@ -1,218 +1,532 @@
-# Agentic Workflow System Testing Plan
+# FlowForge AI MVP Implementation Plan
 
-## System Overview
-The NextProject is an AI-friendly agentic workflow management system (similar to n8n/make.com) with JSON-based workflow definitions. The system is designed to be highly composable and serializable for AI agents to create and execute complex automations.
+## Phase 1: Foundation & Infrastructure (Week 1)
 
-## Core Features Discovered
+### Environment Setup
+- [ ] Configure environment variables structure
+  - [ ] Create `.env.example` with all required vars
+  - [ ] Document each environment variable in README
+  - [ ] Set up local development `.env.local`
+- [ ] Set up Vercel project
+  - [ ] Connect GitHub repository
+  - [ ] Configure production environment variables
+  - [ ] Set up preview deployments
+- [ ] Configure Supabase project
+  - [ ] Create new Supabase project
+  - [ ] Save connection strings
+  - [ ] Enable Row Level Security (RLS)
+- [ ] Set up Upstash Redis
+  - [ ] Create Redis database
+  - [ ] Configure connection for BullMQ
+  - [ ] Set up connection pooling
 
-### 1. Flow Engine Architecture
-- **FlowManager**: Main execution engine with state management, event emission, and execution context
-- **FlowHub**: Singleton event system for cross-flow communication and pause/resume capabilities
-- **NodeRegistry**: Node registration, discovery, and scope management
-- **TriggerManager**: Automation trigger system for event-driven workflows
+### Database Schema ✓
+- [x] Design and implement core tables
+  - [x] Update users table with required fields (email, password_hash, email_verified, created_at, updated_at, last_login_at)
+  - [x] Create workflows table (id, user_id, name, description, json_data, created_at, updated_at)
+  - [x] Create workflow_executions table (id, workflow_id, status, started_at, completed_at, error, result)
+  - [x] Create api_keys table (id, user_id, key_hash, name, last_used, created_at)
+  - [x] Create workflow_schedules table (id, workflow_id, cron_expression, enabled, next_run, last_run)
+- [x] Set up database migrations
+  - [x] Create initial migration files
+  - [x] Apply migrations to database
+  - [ ] Test migration up/down
+  - [ ] Add migration scripts to package.json
+- [ ] Implement Row Level Security policies
+  - [ ] Users can only see their own data
+  - [ ] API keys properly scoped
+  - [ ] Workflow access controls
 
-### 2. Node Types Implemented
-- **Text Processing**: 
-  - `text.transform.toUpperCase`: String transformation
-  - `text.analysis.sentiment`: Sentiment analysis (implementation TBD)
-- **Utilities**:
-  - `utils.log.message`: Logging functionality
-- **Google Integration**:
-  - `google.gmail.connect`: OAuth authentication
-  - `google.gmail.listEmails`: Email listing with optional full details
-  - `google.gdrive.uploadFile`: File upload
-  - `google.gdrive.downloadFile`: File download
-  - `google.gdrive.listFiles`: File listing
+### Authentication System ✓
+- [x] Implement NextAuth.js
+  - [x] Configure auth providers (email/password initially)
+  - [x] Set up session management
+  - [x] Create auth API routes
+  - [x] Add middleware for protected routes
+- [x] Create auth UI components
+  - [x] Login page with form validation
+  - [x] Signup page with password requirements
+  - [ ] Password reset flow (optional for MVP)
+  - [ ] Email verification (optional for MVP)
+- [x] User profile management
+  - [x] Profile page UI
+  - [x] Update profile server action
+  - [x] Change password functionality
 
-### 3. Workflow Features
-- **State Management**: Full state with undo/redo capabilities
-- **State Placeholders**: Dynamic value resolution using `${state.path}` syntax
-- **Branching**: Conditional execution based on edge names
-- **Loops**: Controller-based iteration with action nodes
-- **Sub-flows**: Nested workflow execution
-- **Parameterized Calls**: Node execution with parameters
-- **Human Input**: Pause/resume capabilities for user interaction
-- **Event System**: Custom event emission and listening within flows
+## Phase 2: Core Workflow Engine (Week 2)
 
-### 4. Trigger System
-- **Email Trigger**: Mock implementation for email-based automation
-- **Event Trigger**: General event-based automation
-- **Automation Registration**: Dynamic workflow activation based on triggers
+### Workflow Data Model ✓
+- [x] Define TypeScript types
+  - [x] Workflow interface with JSON schema
+  - [x] Node interface with inputs/outputs
+  - [x] Connection interface
+  - [x] Execution context interface
+- [x] Create workflow validation
+  - [x] JSON schema validation
+  - [x] Node connection validation
+  - [x] Circular dependency detection
+  - [x] Required field validation
 
-## Testing Plan
+### Execution Engine
+- [ ] Set up BullMQ queue system
+  - [ ] Configure Redis connection
+  - [ ] Create workflow execution queue
+  - [ ] Set up queue monitoring
+  - [ ] Implement retry logic
+- [ ] Build execution runtime
+  - [ ] Node execution orchestrator
+  - [ ] Context passing between nodes
+  - [ ] Error handling and recovery
+  - [ ] State persistence during execution
+- [ ] Implement execution features
+  - [ ] Parallel node execution
+  - [ ] Sequential dependencies
+  - [ ] Conditional branching
+  - [ ] Loop handling with limits
+- [ ] Add execution controls
+  - [ ] Start/stop execution
+  - [ ] Pause/resume (basic)
+  - [ ] Execution timeout handling
+  - [ ] Resource limits
 
-### Phase 1: Unit Testing - Core Components ✅ COMPLETED
+### Core Node Implementation
+- [ ] Create base node system
+  - [ ] Abstract Node class/interface
+  - [ ] Node registration system
+  - [ ] Node validation framework
+  - [ ] Input/output type system
+- [ ] Implement logic nodes
+  - [ ] If/Else node with condition evaluation
+  - [ ] Delay node with configurable time
+  - [ ] Loop node with iteration limits
+- [ ] Implement data nodes
+  - [ ] Transform node (JSONata or similar)
+  - [ ] Merge node for combining data
+  - [ ] Filter node for array operations
+- [ ] Implement integration nodes
+  - [ ] HTTP Request node (REST API calls)
+  - [ ] Webhook trigger node
+  - [ ] Webhook response node
+- [ ] Implement AI nodes
+  - [ ] OpenAI completion node
+  - [ ] Anthropic Claude node
+  - [ ] AI response parser node
+- [ ] Implement utility nodes
+  - [ ] Email send node (via Resend)
+  - [ ] Database query node (PostgreSQL)
+  - [ ] Log/Debug node
 
-#### 1.1 FlowManager Tests ✅ (19/19 tests passing)
-- [x] Test basic workflow execution with function nodes
-- [x] Test workflow with string-referenced nodes from scope
-- [x] Test state management (get, set, undo, redo)
-- [x] Test state placeholders resolution
-- [x] Test initial input propagation
-- [x] Test node execution context (`this.state`, `this.input`, `this.self`)
-- [x] Test error handling for missing nodes
-- [x] Test empty workflow execution
+## Phase 3: User Interface (Week 3)
 
-#### 1.2 NodeRegistry Tests ✅ (13/13 tests passing)
-- [x] Test node registration with valid definitions
-- [x] Test duplicate node registration handling
-- [x] Test node retrieval by ID
-- [x] Test node discovery with various criteria (text, categories, tags)
-- [x] Test scope generation for FlowManager
+### Workflow Management UI
+- [ ] Create workflow list page
+  - [ ] Table with workflow name, status, last run
+  - [ ] Search and filter functionality
+  - [ ] Bulk actions (delete, duplicate)
+  - [ ] Pagination
+- [ ] Build workflow create/edit page
+  - [ ] Workflow metadata form
+  - [ ] JSON editor integration
+  - [ ] Save/Update functionality
+  - [ ] Version history (basic)
 
-#### 1.3 FlowHub Tests ✅ (12/12 tests passing)
-- [x] Test event emission and listening
-- [x] Test pause/resume functionality
-- [x] Test multiple concurrent pauses
-- [x] Test event cleanup on flow completion
+### JSON Editor Integration
+- [ ] Integrate Monaco/CodeMirror
+  - [ ] Set up editor component
+  - [ ] Configure JSON syntax highlighting
+  - [ ] Add JSON schema validation
+  - [ ] Implement auto-completion
+- [ ] Add editor features
+  - [ ] Error highlighting with messages
+  - [ ] Format/prettify button
+  - [ ] Find/replace functionality
+  - [ ] Undo/redo support
+- [ ] Create workflow templates
+  - [ ] Basic automation template
+  - [ ] AI chat workflow template
+  - [ ] Data processing template
+  - [ ] Webhook handler template
 
-#### 1.4 State Management Tests ✅ (18/18 tests passing)
-- [x] Test nested state paths
-- [x] Test array access in state placeholders
-- [x] Test state history tracking
-- [x] Test undo/redo boundaries
-- [x] Test setting entire state vs. path-based updates
+### Workflow Visualization
+- [ ] Implement React Flow viewer
+  - [ ] Parse JSON to React Flow nodes
+  - [ ] Auto-layout algorithm
+  - [ ] Connection rendering
+  - [ ] Node status indicators
+- [ ] Add viewer features
+  - [ ] Zoom/pan controls
+  - [ ] Fit to screen button
+  - [ ] Export as image
+  - [ ] Execution path highlighting
 
-### Phase 2: Integration Testing - Workflow Features ✅ COMPLETED
+### Execution Monitoring
+- [ ] Create execution history page
+  - [ ] List of all executions
+  - [ ] Status badges (success/running/failed)
+  - [ ] Execution duration
+  - [ ] Filter by workflow/status/date
+- [ ] Build execution detail view
+  - [ ] Step-by-step execution log
+  - [ ] Node input/output data
+  - [ ] Error details and stack traces
+  - [ ] Execution timeline
+- [ ] Add real-time updates
+  - [ ] WebSocket connection for live logs
+  - [ ] Progress indicators
+  - [ ] Live status updates
 
-#### 2.1 Branching Tests ✅ (All tests passing)
-- [x] Test simple two-way branch
-- [x] Test multi-way branching
-- [x] Test branch with no matching edge
-- [x] Test nested branches
-- [x] Test branch with sub-flows
+## Phase 4: AI Integration & API (Week 4)
 
-#### 2.2 Loop Tests ✅ (All tests passing)
-- [x] Test basic loop with counter
-- [x] Test loop with immediate exit
-- [x] Test loop with complex actions
-- [x] Test nested loops
-- [x] Test loop max iteration safety
+### AI Workflow Creation
+- [ ] Create AI assistant endpoint
+  - [ ] Natural language to workflow parser
+  - [ ] Implement with OpenAI/Anthropic
+  - [ ] Response formatting
+  - [ ] Error handling
+- [ ] Build AI assistant UI
+  - [ ] Chat-like interface
+  - [ ] Workflow preview
+  - [ ] Confirm and edit flow
+  - [ ] Save generated workflow
+- [ ] Implement workflow templates
+  - [ ] AI can suggest templates
+  - [ ] Template customization
+  - [ ] Learning from user patterns
 
-#### 2.3 Sub-flow Tests ✅ (All tests passing)
-- [x] Test simple sub-flow execution
-- [x] Test sub-flow with state propagation
-- [x] Test nested sub-flows
-- [x] Test sub-flow error handling
+### REST API Development
+- [ ] Design API structure
+  - [ ] RESTful endpoints
+  - [ ] API versioning (/api/v1)
+  - [ ] Response format standardization
+  - [ ] Error response format
+- [ ] Implement core endpoints
+  - [ ] GET /api/v1/workflows
+  - [ ] POST /api/v1/workflows
+  - [ ] GET /api/v1/workflows/:id
+  - [ ] PUT /api/v1/workflows/:id
+  - [ ] DELETE /api/v1/workflows/:id
+  - [ ] POST /api/v1/workflows/:id/execute
+  - [ ] GET /api/v1/executions
+  - [ ] GET /api/v1/executions/:id
+- [ ] Add API authentication
+  - [ ] API key generation UI
+  - [ ] API key validation middleware
+  - [ ] Rate limiting per key
+  - [ ] Usage tracking
+- [ ] Create API documentation
+  - [ ] OpenAPI/Swagger spec
+  - [ ] Interactive API docs
+  - [ ] Code examples
+  - [ ] SDKs (at least cURL examples)
 
-#### 2.4 Event System Tests ✅ (All tests passing)
-- [x] Test custom event emission between nodes
-- [x] Test event listeners in different flows
-- [x] Test event data propagation
-- [x] Test listener cleanup
+### Workflow Scheduling
+- [ ] Implement cron scheduler
+  - [ ] Cron expression parser
+  - [ ] Schedule storage
+  - [ ] Next run calculation
+  - [ ] Schedule execution trigger
+- [ ] Create scheduling UI
+  - [ ] Schedule enable/disable
+  - [ ] Cron expression builder
+  - [ ] Next runs preview
+  - [ ] Schedule history
 
-#### 2.5 Additional Features ✅ (All tests passing)
-- [x] Test parameterized node calls
-- [x] Test state placeholder resolution in parameters
-- [x] Test human input / pause-resume functionality
-- [x] Test edge functions with correct context
+## Phase 5: Payments & Subscriptions (Week 5)
 
-### Phase 3: End-to-End Testing 🚧 IN PROGRESS
+### Stripe Integration
+- [ ] Set up Stripe
+  - [ ] Create Stripe account
+  - [ ] Configure webhooks
+  - [ ] Set up products and prices
+  - [ ] Test mode configuration
+- [ ] Implement subscription flow
+  - [ ] Pricing page UI
+  - [ ] Checkout session creation
+  - [ ] Subscription management
+  - [ ] Payment method updates
+- [ ] Add usage tracking
+  - [ ] Track workflow executions
+  - [ ] Implement usage limits
+  - [ ] Usage reset on billing cycle
+  - [ ] Overage handling
+- [ ] Create billing UI
+  - [ ] Current plan display
+  - [ ] Usage statistics
+  - [ ] Invoice history
+  - [ ] Plan upgrade/downgrade
 
-#### 3.1 Complex Workflow Scenarios ✅ COMPLETED
-- [x] Test workflow with all feature types combined ✅
-- [x] Test data processing pipeline (input → transform → output) ✅
-- [x] Test human-in-the-loop workflow ✅
-- [x] Test trigger-based automation with state persistence ✅
-- [x] Test real-world integration scenarios ✅
+### Admin Features
+- [ ] Build admin dashboard
+  - [ ] User management
+  - [ ] System metrics
+  - [ ] Error monitoring
+  - [ ] Usage analytics
+- [ ] Implement admin tools
+  - [ ] Manual subscription adjustments
+  - [ ] User impersonation (debug)
+  - [ ] System announcements
+  - [ ] Feature flags
 
-#### 3.2 Performance Testing ✅ COMPLETED
-- [x] Test large workflow execution (100+ nodes) ✅
-  - 100 nodes: 90ms
-  - 500 nodes: 463ms
-- [x] Test deep nesting performance ✅
-  - 10 levels nested sub-flows: 1ms
-  - 5 levels nested loops: 1ms
-- [x] Test state management with large datasets ✅
-  - Large state (10,000 items): 47ms
-  - 1000 state operations: 106ms
-  - 100 state history operations: 1ms
-- [x] Test concurrent workflow limits ✅
-  - 50 concurrent workflows: 41ms
-  - 20 parallel branches: 12ms
-  - Memory usage stable (no leaks detected)
+## Phase 6: Testing & Polish (Week 6)
 
-#### 3.3 Error Recovery Testing ✅ COMPLETED
-- [x] Test workflow recovery from node failures ✅
-- [x] Test partial state recovery ✅
-- [x] Test trigger error handling ✅
-  
-Error Recovery Capabilities Documented:
-- Workflows stop on unhandled errors
-- Try-catch within nodes allows continuation
-- State is preserved up to the point of failure
-- Manual rollback patterns can be implemented
-- Common patterns tested:
-  - Retry with exponential backoff
-  - Circuit breaker
-  - Compensation/rollback
-  - Graceful degradation
+### Testing Implementation
+- [ ] Unit tests for core logic
+  - [ ] Node execution tests
+  - [ ] Workflow validation tests
+  - [ ] API endpoint tests
+  - [ ] Utility function tests
+- [ ] Integration tests
+  - [ ] Full workflow execution
+  - [ ] API integration tests
+  - [ ] Database operations
+  - [ ] Queue processing
+- [ ] End-to-end tests
+  - [ ] User signup flow
+  - [ ] Workflow creation and execution
+  - [ ] Subscription flow
+  - [ ] API usage flow
 
+### Performance Optimization
+- [ ] Frontend optimization
+  - [ ] Code splitting
+  - [ ] Lazy loading
+  - [ ] Image optimization
+  - [ ] Bundle size analysis
+- [ ] Backend optimization
+  - [ ] Database query optimization
+  - [ ] Caching strategy
+  - [ ] Queue performance tuning
+  - [ ] API response time optimization
 
-## Implementation Strategy
+### Security Hardening
+- [ ] Security audit
+  - [ ] Input validation review
+  - [ ] SQL injection prevention
+  - [ ] XSS prevention
+  - [ ] CSRF protection
+- [ ] API security
+  - [ ] Rate limiting implementation
+  - [ ] API key rotation
+  - [ ] Request validation
+  - [ ] Response sanitization
 
-1. **Test Framework Setup**: Configure Jest/Vitest for the project ✅ COMPLETED
-2. **Mock Infrastructure**: Create mocks for external services (Google APIs, etc.)
-3. **Test Data**: Prepare sample workflows and test scenarios ✅ COMPLETED
-4. **CI/CD Integration**: Add test automation to build pipeline
-5. **Documentation**: Create test documentation and examples ✅ COMPLETED (TEST_RESULTS.md)
+### Documentation
+- [ ] User documentation
+  - [ ] Getting started guide
+  - [ ] Node reference
+  - [ ] Workflow examples
+  - [ ] Troubleshooting guide
+- [ ] Developer documentation
+  - [ ] API reference
+  - [ ] Node development guide
+  - [ ] Architecture overview
+  - [ ] Deployment guide
 
-## Success Criteria
+## Phase 7: Launch Preparation (Week 7)
 
-- All core features have comprehensive test coverage (>80%)
-- All edge cases are identified and tested
-- Performance benchmarks are established
-- Security vulnerabilities are identified and addressed
-- System behaves predictably under various conditions
+### Pre-launch Checklist
+- [ ] Production environment
+  - [ ] Environment variables verified
+  - [ ] Database migrations run
+  - [ ] Redis configured
+  - [ ] Monitoring set up
+- [ ] Error tracking
+  - [ ] Sentry integration
+  - [ ] Error alerting
+  - [ ] Log aggregation
+  - [ ] Performance monitoring
+- [ ] Analytics setup
+  - [ ] PostHog integration
+  - [ ] Conversion tracking
+  - [ ] User behavior tracking
+  - [ ] Custom events
+- [ ] Legal requirements
+  - [ ] Terms of service
+  - [ ] Privacy policy
+  - [ ] Cookie policy
+  - [ ] GDPR compliance basics
 
-## Next Steps
+### Marketing Site
+- [ ] Landing page
+  - [ ] Hero section
+  - [ ] Feature highlights
+  - [ ] Pricing section
+  - [ ] Testimonials (if any)
+- [ ] Marketing pages
+  - [ ] About page
+  - [ ] Use cases
+  - [ ] Comparison page
+  - [ ] Blog (optional for MVP)
+- [ ] SEO optimization
+  - [ ] Meta tags
+  - [ ] Sitemap
+  - [ ] Robots.txt
+  - [ ] OpenGraph tags
 
-1. Review this plan and identify priorities
-2. Set up testing infrastructure
-3. Begin with Phase 1 unit tests
-4. Progressively work through each phase
-5. Document findings and create bug reports
-6. Implement fixes and re-test
+### Launch Activities
+- [ ] Soft launch
+  - [ ] Beta user onboarding
+  - [ ] Feedback collection
+  - [ ] Bug fixes
+  - [ ] Performance monitoring
+- [ ] Public launch
+  - [ ] ProductHunt preparation
+  - [ ] HackerNews submission
+  - [ ] Social media announcements
+  - [ ] Email campaign (if applicable)
+
+## Post-Launch Priorities
+
+### Week 8+
+- [ ] User feedback implementation
+- [ ] Additional node types based on demand
+- [ ] Performance improvements
+- [ ] Advanced AI features
+- [ ] Mobile responsive improvements
+- [ ] Additional integrations
+- [ ] Community building
+- [ ] Content marketing
+
+## Success Metrics Tracking
+
+### Technical Metrics
+- [ ] API response time < 200ms
+- [ ] Workflow execution start < 5s
+- [ ] 99% uptime achieved
+- [ ] Zero critical security issues
+
+### Business Metrics
+- [ ] 500 signups achieved
+- [ ] 50 paying customers
+- [ ] $2,500 MRR
+- [ ] 40% weekly active users
+
+### User Satisfaction
+- [ ] NPS score > 40
+- [ ] Support response time < 24h
+- [ ] Feature request tracking
+- [ ] Churn rate < 10%
 
 ---
 
-This testing plan ensures the agentic workflow system is robust, reliable, and ready for production use in AI-driven automation scenarios.
+## Notes
 
-## Progress Summary (Updated: 2025-01-24)
+- Each week focuses on a major component
+- Items can be worked on in parallel where possible
+- Adjust timeline based on team size and expertise
+- Prioritize security and reliability over features
+- Get user feedback early and often
 
-### ✅ Completed:
-- Phase 1: Unit Testing - Core Components (62/62 tests passing)
-  - FlowManager basic tests: 19/19 ✅
-  - NodeRegistry tests: 13/13 ✅  
-  - FlowHub tests: 12/12 ✅
-  - StateManager tests: 18/18 ✅
-- Phase 2: Integration Testing - Workflow Features (16/16 tests passing)
-  - Branching tests: 4/4 ✅
-  - Loop tests: 5/5 ✅
-  - Sub-flow tests: 2/2 ✅
-  - Event system tests: 2/2 ✅
-  - Parameterized calls: 2/2 ✅
-  - Human input/pause-resume: 1/1 ✅
-- Test Framework Setup (Jest + TypeScript)
-- Test Data & Scenarios
-- Documentation (TEST_RESULTS.md)
+---
 
-### ✅ Completed Testing Phases:
-- Phase 1: Unit Testing - Core Components (62/62 tests) ✅
-- Phase 2: Integration Testing - Workflow Features (31/31 tests) ✅
-- Phase 3: End-to-End Testing ✅
-  - Complex workflow scenarios (5/5 tests) ✅
-  - Performance testing (12/12 tests) ✅
-  - Error recovery testing (12/12 tests) ✅
+## Implementation Summary
 
-### 🐛 Bugs Fixed:
-1. **Loop Exit Bug**: Fixed - loops now properly exit when controller returns 'exit' edge
-2. **Branch SubSteps**: Fixed - branch execution now creates expected subSteps structure
-3. **ProcessReturnedValue**: Fixed - now preserves edges when object already has edges property
+### Authentication System Setup (Completed)
 
-### 📊 Overall Progress: 100% of test plan completed! 🎉
-- Unit Tests: 62/62 ✅
-- Integration Tests: 31/31 ✅  
-- Performance Tests: 12/12 ✅
-- Error Recovery Tests: 12/12 ✅
-- **Total: 117/117 tests passing (100% pass rate)**
+#### Main Steps Taken:
+
+1. **Installed Dependencies**
+   - NextAuth.js v5 (beta) for authentication
+   - bcryptjs for password hashing
+   - react-hook-form and zod for form validation
+   - @hookform/resolvers for form schema validation
+
+2. **Created Authentication Configuration**
+   - Set up NextAuth.js with credentials provider in `src/auth.ts`
+   - Configured JWT session strategy with 30-day expiration
+   - Added custom session callbacks to include user ID
+
+3. **Implemented Password Security**
+   - Created password utilities in `src/lib/auth/password.ts`
+   - Password requirements: 8+ chars, uppercase, lowercase, number, special char
+   - Used bcrypt with 10 salt rounds for hashing
+
+4. **Set Up Middleware**
+   - Created middleware in `src/middleware.ts` for route protection
+   - Redirects unauthenticated users to login page
+   - Redirects authenticated users away from auth pages
+
+5. **Created UI Components**
+   - Login page with email/password validation
+   - Signup page with password requirements display
+   - Profile page with user info and forms
+   - Dashboard page for authenticated users
+
+6. **Implemented User Management**
+   - Server actions for user creation and profile updates
+   - Change password functionality with current password verification
+   - Profile update capability
+
+7. **Updated Layout**
+   - Added SessionProvider wrapper
+   - Dynamic navigation based on auth status
+   - Sign out functionality in navigation
+
+#### Key Files Created:
+- `src/auth.ts` - NextAuth configuration
+- `src/middleware.ts` - Route protection
+- `src/app/api/auth/[...nextauth]/route.ts` - Auth API handler
+- `src/lib/auth/password.ts` - Password utilities
+- `src/lib/auth/signup.ts` - User creation logic
+- `src/lib/auth/profile-actions.ts` - Profile management
+- `src/app/login/page.tsx` - Login page
+- `src/app/signup/page.tsx` - Signup page
+- `src/app/profile/page.tsx` - Profile page
+- `src/app/dashboard/page.tsx` - Dashboard page
+- `src/components/auth/*` - Auth-related components
+
+#### Environment Variables Added:
+- `NEXTAUTH_SECRET` - For JWT encryption
+- `NEXTAUTH_URL` - Base URL for callbacks
+
+The authentication system is now fully functional with secure password handling, session management, and protected routes.
+
+---
+
+### Workflow Data Model Implementation (Completed)
+
+#### What Was Implemented:
+
+1. **TypeScript Type Definitions** (`src/lib/workflow/types/`)
+   - **Base Types** (`base.ts`): Core enums and interfaces for data types, categories, statuses
+   - **Node Types** (`node.ts`): Complete node system with inputs, outputs, edges, and execution
+   - **Connection Types** (`connection.ts`): Connection definitions with validation support
+   - **Workflow Types** (`workflow.ts`): Main workflow structure with config, triggers, and templates
+   - **Execution Types** (`execution.ts`): Execution context and runtime services
+
+2. **JSON Schema Validation** (`src/lib/workflow/schemas/`)
+   - Created comprehensive JSON schema for workflow validation
+   - Supports all workflow components: nodes, connections, variables, inputs/outputs, triggers
+   - Includes nested definitions for complex structures
+
+3. **Validation Implementation** (`src/lib/workflow/validation/`)
+   - **WorkflowValidator**: Complete workflow validation with schema and business rules
+   - **ConnectionValidator**: Connection-specific validation including:
+     - Type compatibility checking
+     - Circular dependency detection using DFS
+     - Port validation
+     - Required connection checking
+   - Uses AJV for JSON schema validation
+
+4. **Example Implementation** (`src/lib/workflow/examples/`)
+   - Created example workflow demonstrating HTTP request, conditional logic, and data transformation
+   - Shows how to define nodes and validate workflows
+   - Includes programmatic workflow creation
+
+#### Key Features:
+
+- **Type Safety**: Full TypeScript support with comprehensive interfaces
+- **Flexible Node System**: Supports multiple input/output ports, edges for branching, and custom validation
+- **Connection Validation**: Type checking, circular dependency detection, and connection rules
+- **Execution Context**: Rich context with state management, logging, events, and flow control
+- **Extensible Design**: Easy to add new node types and validation rules
+- **JSON Schema**: Industry-standard validation with AJV
+
+#### Architecture Highlights:
+
+1. **Modular Structure**: Types, validation, and schemas are separated for clarity
+2. **Comprehensive Validation**: Both structural (JSON schema) and logical (business rules)
+3. **AI-Friendly**: Nodes include AI prompt hints for better discovery
+4. **Production Ready**: Includes retry policies, error handling, and resource limits
+
+The workflow data model provides a solid foundation for building the execution engine and UI components.
