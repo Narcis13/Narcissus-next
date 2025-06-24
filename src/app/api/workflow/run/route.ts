@@ -1,47 +1,58 @@
 import { NextResponse } from 'next/server';
-import { FlowManager } from '@/lib/flow-engine/core/FlowManager.js';
-import { nodeRegistry, flowHub } from '@/lib/flow-engine/singletons';
-// Run initialization logic once when this module is first loaded.
-
+import { ExecutionManager, ExecutionContext, ExecutionOptions } from '@/lib/flow-engine/execution';
+import { Workflow } from '@/lib/workflow/types';
 
 export async function POST(request: Request) {
     try {
-        const { nodes, initialState } = await request.json();
-        console.log('Received nodes:', nodes);
-        console.log('Initial state:', initialState);
+        const { workflow, mode, options } = await request.json();
         
-        if (!nodes || !Array.isArray(nodes)) {
+        if (!workflow) {
             return NextResponse.json(
-                { message: 'Workflow nodes are required.' },
+                { message: 'Workflow definition is required.' },
                 { status: 400 }
             );
         }
 
-        console.log('Creating FlowManager with nodeRegistry scope:', Object.keys(nodeRegistry.getScope()));
-        
-        const fm = FlowManager({
-            nodes,
-            initialState: initialState || {},
-            scope: nodeRegistry.getScope(),
-        }) as {
-            run: () => Promise<any[]>;
-            getInstanceId: () => string;
-            getSteps: () => any[];
-            getStateManager: () => any;
+        // Create execution context
+        const context: ExecutionContext = {
+            executionId: '', // Will be set by ExecutionManager
+            workflowId: workflow.id || 'temp-workflow',
+            userId: 1, // Hardcoded for now
+            startedAt: new Date(),
+            input: workflow.inputs || {},
+            metadata: {
+                source: 'api',
+                mode: mode || 'auto',
+            },
         };
-        
-        console.log('FlowManager created with ID:', fm.getInstanceId());
-        
-        // Run the flow and handle the promise
-        fm.run().then((result) => {
-            console.log('Flow execution completed:', result);
-        }).catch((error) => {
-            console.error('Flow execution error:', error);
-        });
+
+        // Create execution options
+        const executionOptions: ExecutionOptions = {
+            mode: mode || 'auto',
+            timeout: options?.timeout || 300000, // 5 minutes default
+            priority: options?.priority || 1,
+            tags: options?.tags || [],
+            ...options,
+        };
+
+        // Get ExecutionManager instance
+        const executionManager = ExecutionManager.getInstance();
+
+        // Analyze complexity if in auto mode
+        let complexity;
+        if (executionOptions.mode === 'auto') {
+            complexity = executionManager.getWorkflowComplexity(workflow);
+        }
+
+        // Execute workflow
+        const result = await executionManager.execute(workflow, context, executionOptions);
 
         return NextResponse.json({
-            message: 'Workflow started.',
-            flowInstanceId: fm.getInstanceId(),
+            message: result.status === 'pending' ? 'Workflow queued for execution.' : 'Workflow execution started.',
+            executionId: result.executionId,
+            status: result.status,
+            complexity,
+            mode: executionOptions.mode,
         });
     } catch (error: any) {
         console.error('API Route Error:', error);

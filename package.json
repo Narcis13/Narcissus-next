@@ -14,7 +14,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:push": "drizzle-kit push",
-    "db:fix-migration-state": "tsx src/db/fix-migration-state.ts"
+    "db:fix-migration-state": "tsx src/db/fix-migration-state.ts",
+    "worker": "tsx src/lib/flow-engine/start-worker.ts",
+    "worker:dev": "tsx --watch src/lib/flow-engine/start-worker.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
