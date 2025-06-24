@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NextProject - Workflow Automation",
+  title: "FlowForge AI - Workflow Automation",
   description: "AI-powered workflow automation platform",
 };
 
@@ -35,64 +35,68 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthSessionProvider>
-          <nav className="bg-gray-800 text-white p-4">
-            <div className="max-w-6xl mx-auto flex justify-between items-center">
-              <div className="flex gap-6">
-                <Link href="/" className="hover:text-blue-300 transition-colors">
-                  Home
-                </Link>
+          <nav className="navbar bg-base-200">
+            <div className="navbar-start">
+              <div className="dropdown">
+                <label tabIndex={0} className="btn btn-ghost lg:hidden">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" />
+                  </svg>
+                </label>
+                <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                  <li><Link href="/">Home</Link></li>
+                  {session && (
+                    <>
+                      <li><Link href="/dashboard">Dashboard</Link></li>
+                      <li><Link href="/workflows">Workflows</Link></li>
+                      <li><Link href="/posts">Posts</Link></li>
+                      <li><Link href="/credentials">Credentials</Link></li>
+                      <li><Link href="/profile">Profile</Link></li>
+                    </>
+                  )}
+                </ul>
+              </div>
+              <Link href="/" className="btn btn-ghost text-xl">FlowForge AI</Link>
+            </div>
+            <div className="navbar-center hidden lg:flex">
+              <ul className="menu menu-horizontal px-1">
+                <li><Link href="/">Home</Link></li>
                 {session && (
                   <>
-                    <Link href="/dashboard" className="hover:text-blue-300 transition-colors">
-                      Dashboard
-                    </Link>
-                    <Link href="/posts" className="hover:text-blue-300 transition-colors">
-                      Posts
-                    </Link>
-                    <Link href="/credentials" className="hover:text-blue-300 transition-colors">
-                      Credentials
-                    </Link>
-                    <Link href="/profile" className="hover:text-blue-300 transition-colors">
-                      Profile
-                    </Link>
+                    <li><Link href="/dashboard">Dashboard</Link></li>
+                    <li><Link href="/workflows">Workflows</Link></li>
+                    <li><Link href="/posts">Posts</Link></li>
+                    <li><Link href="/credentials">Credentials</Link></li>
+                    <li><Link href="/profile">Profile</Link></li>
                   </>
                 )}
-              </div>
-              <div className="flex gap-4 items-center">
-                {session ? (
-                  <>
-                    <span className="text-sm">{session.user?.email}</span>
-                    <form
-                      action={async () => {
-                        "use server";
-                        await signOut();
-                      }}
-                    >
-                      <button
-                        type="submit"
-                        className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm transition-colors"
-                      >
-                        Sign Out
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm transition-colors"
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      href="/signup"
-                      className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm transition-colors"
-                    >
-                      Sign Up
-                    </Link>
-                  </>
-                )}
-              </div>
+              </ul>
+            </div>
+            <div className="navbar-end">
+              {session ? (
+                <>
+                  <span className="text-sm mr-4">{session.user?.email}</span>
+                  <form
+                    action={async () => {
+                      "use server";
+                      await signOut();
+                    }}
+                  >
+                    <button type="submit" className="btn btn-error btn-sm">
+                      Sign Out
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="btn btn-primary btn-sm mr-2">
+                    Login
+                  </Link>
+                  <Link href="/signup" className="btn btn-success btn-sm">
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
           {children}
