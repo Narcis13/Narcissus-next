@@ -169,3 +169,77 @@ export async function duplicateWorkflow(id: string) {
   revalidatePath("/workflows");
   return newWorkflow;
 }
+
+export async function getWorkflow(id: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  const [workflow] = await db
+    .select()
+    .from(workflows)
+    .where(and(eq(workflows.id, id), eq(workflows.userId, session.user.id)))
+    .limit(1);
+
+  if (!workflow) {
+    throw new Error("Workflow not found");
+  }
+
+  return workflow;
+}
+
+export async function createWorkflow(data: {
+  name: string;
+  description?: string;
+  jsonData: any;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  const [workflow] = await db
+    .insert(workflows)
+    .values({
+      userId: session.user.id,
+      name: data.name,
+      description: data.description,
+      jsonData: data.jsonData,
+    })
+    .returning();
+
+  revalidatePath("/workflows");
+  return workflow;
+}
+
+export async function updateWorkflow(
+  id: string,
+  data: {
+    name?: string;
+    description?: string;
+    jsonData?: any;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  const [workflow] = await db
+    .update(workflows)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(workflows.id, id), eq(workflows.userId, session.user.id)))
+    .returning();
+
+  if (!workflow) {
+    throw new Error("Workflow not found");
+  }
+
+  revalidatePath("/workflows");
+  revalidatePath(`/workflows/${id}`);
+  return workflow;
+}
