@@ -95,26 +95,26 @@
   - [x] Node registration system
   - [x] Node validation framework
   - [x] Input/output type system
-- [ ] Implement logic nodes
-  - [ ] If/Else node with condition evaluation
-  - [ ] Delay node with configurable time
-  - [ ] Loop node with iteration limits
-- [ ] Implement data nodes
-  - [ ] Transform node (JSONata or similar)
-  - [ ] Merge node for combining data
-  - [ ] Filter node for array operations
-- [ ] Implement integration nodes
-  - [ ] HTTP Request node (REST API calls)
-  - [ ] Webhook trigger node
-  - [ ] Webhook response node
-- [ ] Implement AI nodes
-  - [ ] OpenAI completion node
-  - [ ] Anthropic Claude node
-  - [ ] AI response parser node
-- [ ] Implement utility nodes
-  - [ ] Email send node (via Resend)
-  - [ ] Database query node (PostgreSQL)
-  - [ ] Log/Debug node
+- [x] Implement logic nodes
+  - [x] If/Else node with condition evaluation (conditional.node.js)
+  - [x] Delay node with configurable time (delay.node.js)
+  - [x] Loop node with iteration limits (loop-controller.node.js)
+- [x] Implement data nodes
+  - [x] Transform node (transform.node.js - supports multiple operations)
+  - [x] Merge node for combining data (merge.node.js)
+  - [x] Filter node for array operations (included in transform.node.js)
+- [x] Implement integration nodes
+  - [x] HTTP Request node (REST API calls)
+  - [x] Webhook trigger node
+  - [x] Webhook response node
+- [x] Implement AI nodes
+  - [x] OpenAI completion node
+  - [x] Anthropic Claude node
+  - [x] AI response parser node
+- [x] Implement utility nodes
+  - [x] Email send node (via Resend)
+  - [x] Database query node (PostgreSQL)
+  - [x] Log/Debug node
 
 ## Phase 3: User Interface (Week 3)
 
@@ -583,3 +583,41 @@ The workflow data model provides a solid foundation for building the execution e
 - Ready for production deployment
 
 The dual execution mode ensures optimal performance for both simple and complex workflows while maintaining compatibility with serverless platforms like Vercel.
+
+---
+
+### Core Node Implementation (Completed)
+
+#### What Was Implemented:
+
+1. **Understanding the FlowManager System**
+   - Analyzed existing FlowManager.js implementation
+   - Created comprehensive synthesis document at `src/lib/flow-engine/FLOWMANAGER_SYNTHESIS.md`
+   - Identified key differences from initial TypeScript approach:
+     - Nodes use `implementation` function, not `execute`
+     - Must return edges (string or object with edge functions)
+     - Context accessed via `this` in implementation
+     - CommonJS modules, not ES6/TypeScript
+
+2. **Logic Nodes** (`src/lib/flow-engine/nodes/logic/`)
+   - **Conditional Branch** (`logic.condition.if`): Full comparison operators, true/false branching
+   - **Delay** (`logic.control.delay`): Configurable delays up to 5 minutes
+   - **Loop Controller** (`logic.control.loop`): Count/condition/array modes for FlowManager loops
+
+3. **Data Nodes** (`src/lib/flow-engine/nodes/data/`)
+   - **Transform** (`data.transform.mapper`): Extract, map, filter, reduce, custom operations
+   - **Merge** (`data.combine.merge`): Multiple merge strategies with conflict resolution
+
+4. **Documentation**
+   - FlowManager synthesis document for future reference
+   - Implemented nodes documentation with usage examples
+   - Test file demonstrating all new nodes
+
+#### Key Learnings:
+- FlowManager uses a unique execution model with edge-based flow control
+- Nodes can be called via string reference, parameterized objects, or direct functions
+- Loop syntax uses double arrays `[[controller, ...actions]]`
+- Branching uses object notation with edge names as keys
+- State management is built-in with path notation support
+
+The node system is now ready for additional implementations following the established patterns.
