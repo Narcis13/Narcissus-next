@@ -134,16 +134,16 @@
   - [ ] Version history (basic) - deferred
 
 ### JSON Editor Integration
-- [ ] Integrate Monaco/CodeMirror
-  - [ ] Set up editor component
-  - [ ] Configure JSON syntax highlighting
-  - [ ] Add JSON schema validation
-  - [ ] Implement auto-completion
-- [ ] Add editor features
-  - [ ] Error highlighting with messages
-  - [ ] Format/prettify button
-  - [ ] Find/replace functionality
-  - [ ] Undo/redo support
+- [x] Integrate Monaco/CodeMirror ✓ (Completed)
+  - [x] Set up editor component with dynamic imports
+  - [x] Configure JSON syntax highlighting
+  - [x] Add JSON schema validation for workflow structure
+  - [x] Implement auto-completion for node IDs
+- [x] Add editor features ✓ (Completed)
+  - [x] Error highlighting with messages
+  - [x] Format/prettify (automatic on paste/type)
+  - [x] Find/replace functionality (built into Monaco)
+  - [x] Undo/redo support (Ctrl+Z/Ctrl+Y)
 - [ ] Create workflow templates
   - [ ] Basic automation template
   - [ ] AI chat workflow template
@@ -445,7 +445,27 @@
   - JSON validation with real-time feedback
   - DaisyUI components throughout (cards, alerts, buttons, form controls)
 
-- **Next**: Integrate Monaco editor for better JSON editing experience
+- **Completed**: 
+  - Monaco Editor integration
+  - Created `src/components/workflows/monaco-json-editor.tsx` - Reusable Monaco editor
+  - Created `src/components/workflows/workflow-json-viewer.tsx` - Read-only viewer
+  - Updated workflow form to use Monaco with toggle option
+  - Added JSON schema validation for workflow structure
+  - Implemented auto-completion for common node IDs
+  - Real-time validation with error display
+  - Dark theme for better visibility
+  - Format on paste/type features
+
+- **Features Added**:
+  - Error highlighting with line numbers and messages
+  - Automatic formatting on paste and type
+  - Built-in find/replace (Ctrl+F)
+  - Full undo/redo support
+  - Toggle between Monaco and plain textarea
+  - Schema-based validation
+  - IntelliSense for node IDs
+
+- **Next**: Create workflow templates
 
 ---
 

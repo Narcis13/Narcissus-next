@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
+    "@monaco-editor/react": "^4.7.0",
     "@supabase/supabase-js": "^2.50.0",
     "@types/bcryptjs": "^2.4.6",
     "@upstash/redis": "^1.35.0",
@@ -33,6 +34,7 @@
     "googleapis": "^135.1.0",
     "ioredis": "^5.6.1",
     "lucide-react": "^0.523.0",
+    "monaco-editor": "^0.52.2",
     "next": "15.3.1",
     "next-auth": "^5.0.0-beta.29",
     "postgres": "^3.4.7",

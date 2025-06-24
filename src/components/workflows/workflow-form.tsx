@@ -1,13 +1,27 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createWorkflow, updateWorkflow } from "@/lib/workflow/workflow-actions";
-import { Save, AlertCircle } from "lucide-react";
+import { Save, AlertCircle, FileJson, Code2 } from "lucide-react";
 import type { Workflow } from "@/db/schema";
+import dynamic from "next/dynamic";
+
+// Dynamically import Monaco to avoid SSR issues
+const MonacoJsonEditor = dynamic(
+  () => import("./monaco-json-editor"),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-96 bg-base-200 rounded-lg">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    )
+  }
+);
 
 const workflowSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
@@ -32,12 +46,16 @@ export default function WorkflowForm({ workflow }: WorkflowFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [jsonValidationErrors, setJsonValidationErrors] = useState<any[]>([]);
+  const [useCodeEditor, setUseCodeEditor] = useState(true);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     watch,
+    control,
+    setValue,
   } = useForm<WorkflowFormData>({
     resolver: zodResolver(workflowSchema),
     defaultValues: {
@@ -142,31 +160,71 @@ export default function WorkflowForm({ workflow }: WorkflowFormProps) {
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="card-title">Workflow Configuration</h2>
-            <div className="text-sm">
-              {jsonError ? (
-                <span className="text-error flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  Invalid JSON
-                </span>
-              ) : (
-                <span className="text-success">Valid JSON</span>
-              )}
+            <h2 className="card-title flex items-center gap-2">
+              <FileJson className="w-5 h-5" />
+              Workflow Configuration
+            </h2>
+            <div className="flex items-center gap-4">
+              <div className="text-sm">
+                {jsonError || jsonValidationErrors.length > 0 ? (
+                  <span className="text-error flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {jsonValidationErrors.length} validation {jsonValidationErrors.length === 1 ? 'error' : 'errors'}
+                  </span>
+                ) : (
+                  <span className="text-success">Valid JSON</span>
+                )}
+              </div>
+              <label className="label cursor-pointer gap-2">
+                <span className="label-text">Code Editor</span>
+                <input
+                  type="checkbox"
+                  className="toggle toggle-primary"
+                  checked={useCodeEditor}
+                  onChange={(e) => setUseCodeEditor(e.target.checked)}
+                />
+              </label>
             </div>
           </div>
 
           <div className="form-control">
-            <textarea
-              placeholder="Enter workflow JSON..."
-              className={`textarea textarea-bordered font-mono text-sm h-96 ${
-                errors.jsonData || jsonError ? "textarea-error" : ""
-              }`}
-              {...register("jsonData")}
-            />
+            {useCodeEditor ? (
+              <Controller
+                name="jsonData"
+                control={control}
+                render={({ field }) => (
+                  <MonacoJsonEditor
+                    value={field.value}
+                    onChange={field.onChange}
+                    onValidate={(isValid, errors) => {
+                      setJsonValidationErrors(errors);
+                    }}
+                    height="400px"
+                  />
+                )}
+              />
+            ) : (
+              <textarea
+                placeholder="Enter workflow JSON..."
+                className={`textarea textarea-bordered font-mono text-sm h-96 ${
+                  errors.jsonData || jsonError ? "textarea-error" : ""
+                }`}
+                {...register("jsonData")}
+              />
+            )}
             {errors.jsonData && (
               <label className="label">
                 <span className="label-text-alt text-error">{errors.jsonData.message}</span>
               </label>
+            )}
+            {jsonValidationErrors.length > 0 && useCodeEditor && (
+              <div className="mt-2 max-h-32 overflow-y-auto">
+                {jsonValidationErrors.slice(0, 3).map((error, index) => (
+                  <div key={index} className="text-sm text-error">
+                    Line {error.startLineNumber}: {error.message}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

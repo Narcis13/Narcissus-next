@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Edit, Play, Code2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import WorkflowJsonViewer from "@/components/workflows/workflow-json-viewer";
 
 export default async function WorkflowDetailPage({
   params,
@@ -84,11 +85,7 @@ export default async function WorkflowDetailPage({
                 <Code2 className="w-5 h-5" />
                 Workflow Configuration
               </h2>
-              <div className="overflow-x-auto">
-                <pre className="bg-base-200 p-4 rounded-lg text-sm">
-                  <code>{JSON.stringify(workflow.jsonData, null, 2)}</code>
-                </pre>
-              </div>
+              <WorkflowJsonViewer workflow={workflow} />
             </div>
           </div>
         </div>
