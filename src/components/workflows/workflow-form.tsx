@@ -223,7 +223,7 @@ export default function WorkflowForm({ workflow, initialTemplate }: WorkflowForm
             </label>
             <textarea
               placeholder="Describe what this workflow does..."
-              className="textarea textarea-bordered h-24"
+              className="textarea textarea-bordered w-full h-24"
               {...register("description")}
             />
           </div>

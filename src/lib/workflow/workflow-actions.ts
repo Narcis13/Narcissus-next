@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { db } from "@/lib/db";
 import { workflows, workflowExecutions } from "@/db/schema";
 import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
 import { auth } from "@/auth";

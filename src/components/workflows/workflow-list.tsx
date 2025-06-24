@@ -190,7 +190,7 @@ export default function WorkflowList({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto relative">
         <table className="table table-zebra">
           <thead>
             <tr>
@@ -229,7 +229,7 @@ export default function WorkflowList({
             </tr>
           </thead>
           <tbody>
-            {workflows.map((workflow) => (
+            {workflows.map((workflow, index) => (
               <tr key={workflow.id} className={deletingId === workflow.id ? "opacity-50" : ""}>
                 <td>
                   <label>
@@ -293,13 +293,13 @@ export default function WorkflowList({
                   </span>
                 </td>
                 <td>
-                  <div className="dropdown dropdown-end">
+                  <div className={`dropdown dropdown-end ${index >= workflows.length - 2 ? 'dropdown-top' : 'dropdown-bottom'}`}>
                     <label tabIndex={0} className="btn btn-ghost btn-sm btn-square">
                       <MoreVertical className="w-4 h-4" />
                     </label>
                     <ul
                       tabIndex={0}
-                      className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52"
+                      className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-[100] absolute"
                     >
                       <li>
                         <Link href={`/workflows/${workflow.id}/run`}>
