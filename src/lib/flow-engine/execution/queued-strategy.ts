@@ -1,4 +1,3 @@
-import { Workflow } from "@/lib/workflow/types";
 import { 
   ExecutionContext, 
   ExecutionResult, 
@@ -11,7 +10,7 @@ import { flowHub } from "@/lib/flow-engine/singletons";
 
 export class QueuedExecutionStrategy extends BaseExecutionStrategy {
   async execute(
-    workflow: Workflow,
+    workflow: any,
     context: ExecutionContext,
     options?: ExecutionOptions
   ): Promise<ExecutionResult> {

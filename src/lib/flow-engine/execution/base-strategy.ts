@@ -1,6 +1,5 @@
 import { FlowManager } from "@/lib/flow-engine/core/FlowManager.js";
 import { nodeRegistry, flowHub } from "@/lib/flow-engine/singletons";
-import { Workflow } from "@/lib/workflow/types";
 import { 
   ExecutionContext, 
   ExecutionResult, 
@@ -15,7 +14,7 @@ export abstract class BaseExecutionStrategy implements ExecutionStrategy {
   protected activeExecutions = new Map<string, any>();
 
   abstract execute(
-    workflow: Workflow,
+    workflow: any,
     context: ExecutionContext,
     options?: ExecutionOptions
   ): Promise<ExecutionResult>;
@@ -51,7 +50,7 @@ export abstract class BaseExecutionStrategy implements ExecutionStrategy {
   }
 
   protected createFlowManager(
-    workflow: Workflow,
+    workflow: any,
     context: ExecutionContext,
     onStep?: (step: ExecutionStep) => void
   ) {
@@ -60,9 +59,10 @@ export abstract class BaseExecutionStrategy implements ExecutionStrategy {
     
     const fm = FlowManager({
       nodes,
-      initialState: context.input || {},
+      initialState: workflow.initialState || context.input || {},
       instanceId: context.executionId,
       scope: nodeRegistry.getScope(),
+      initialInput: context.input
     });
 
     // Listen to flow events
@@ -85,23 +85,35 @@ export abstract class BaseExecutionStrategy implements ExecutionStrategy {
     return fm;
   }
 
-  protected convertWorkflowToFlowNodes(workflow: Workflow): any[] {
-    // Convert from typed Workflow format to FlowManager nodes array
-    const nodes: any[] = [];
-    
-    for (const node of workflow.nodes) {
-      // Create a node that FlowManager can execute
-      const flowNode = {
-        id: node.id,
-        type: node.nodeId,
-        inputs: node.inputs,
-        config: node.config,
-      };
+  protected convertWorkflowToFlowNodes(workflow: any): any[] {
+    // If workflow already has FlowManager-compatible nodes array, use it directly
+    if (workflow.nodes && Array.isArray(workflow.nodes)) {
+      // Check if it's already in FlowManager format
+      const firstNode = workflow.nodes[0];
+      if (typeof firstNode === 'string' || 
+          (typeof firstNode === 'object' && !firstNode.id && !firstNode.nodeId) ||
+          Array.isArray(firstNode)) {
+        // Already in FlowManager format
+        return workflow.nodes;
+      }
       
-      nodes.push(flowNode);
+      // Otherwise, try to convert from old format
+      // This is for backward compatibility only
+      const nodes: any[] = [];
+      for (const node of workflow.nodes) {
+        if (node.nodeId && node.inputs) {
+          // Convert old format to parameterized node
+          nodes.push({ [node.nodeId]: node.inputs });
+        } else if (node.nodeId) {
+          // Simple node reference
+          nodes.push(node.nodeId);
+        }
+      }
+      return nodes;
     }
-
-    return nodes;
+    
+    // Fallback to empty array
+    return [];
   }
 
   protected async handleFlowExecution(

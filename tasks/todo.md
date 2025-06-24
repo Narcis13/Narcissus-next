@@ -685,3 +685,55 @@ The dual execution mode ensures optimal performance for both simple and complex 
 - State management is built-in with path notation support
 
 The node system is now ready for additional implementations following the established patterns.
+
+---
+
+## FlowManager Workflow System Refactoring (Completed)
+
+### Tasks Completed:
+
+✅ Read and analyze FLOWMANAGER_SYNTHESIS.md
+✅ Read FlowManager.js implementation
+✅ Check current workflow templates and validation
+✅ Refactor workflow types to match FlowManager
+✅ Update workflow validation logic
+✅ Fix workflow templates
+✅ Update Monaco editor schema
+✅ Test workflow execution
+
+### Review:
+
+The workflow system has been successfully refactored to properly support FlowManager's execution model:
+
+1. **Created FlowManager-compatible types** (`src/lib/workflow/types/flowmanager-workflow.ts`):
+   - `FlowNode` type that supports all FlowManager node formats
+   - Helper functions to identify node types
+   - Simplified workflow structure without connections array
+
+2. **Updated validation** (`src/lib/workflow/validation/flowmanager-validator.ts`):
+   - New validator that understands FlowManager node structures
+   - Proper validation for strings, parameterized nodes, sub-flows, loops, and branches
+   - Integration with NodeRegistry to verify node existence
+
+3. **Fixed Monaco editor schema**:
+   - Removed connections array from schema
+   - Updated node structure to match FlowManager format
+   - Fixed auto-completion to work with new structure
+
+4. **Updated execution system**:
+   - Modified base strategy to handle both old and new workflow formats
+   - Updated ComplexityAnalyzer to work with FlowManager workflows
+   - Removed dependencies on old Workflow type
+
+5. **Fixed UI components**:
+   - Removed connections array from default workflow template
+   - Templates already use correct FlowManager format
+
+The system now properly handles FlowManager workflows with:
+- String nodes: `"node.id"`
+- Parameterized nodes: `{ "node.id": { params } }`
+- Sub-flows: `[node1, node2]`
+- Loops: `[[controller, action1, action2]]`
+- Branches: `{ "edgeName": nextNode }`
+
+This ensures workflows will execute correctly in FlowManager without syntax errors when using parameterized function calls.

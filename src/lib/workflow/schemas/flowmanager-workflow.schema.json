@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://nextproject.com/schemas/flowmanager-workflow.json",
+  "title": "FlowManager Workflow Schema",
+  "description": "Schema for FlowManager workflow definitions",
+  "type": "object",
+  "required": ["name", "nodes"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable workflow name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Workflow description"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/flowNode"
+      },
+      "minItems": 1,
+      "description": "Array of workflow nodes"
+    },
+    "initialState": {
+      "type": "object",
+      "description": "Initial state for the workflow (accessible via ${path.to.value} in parameters or state.get/set in node implementations)",
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "flowNode": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Node ID reference (e.g., 'http.request.get')",
+          "pattern": "^[a-zA-Z_][a-zA-Z0-9._]*$"
+        },
+        {
+          "$ref": "#/definitions/parameterizedNode"
+        },
+        {
+          "$ref": "#/definitions/subFlow"
+        },
+        {
+          "$ref": "#/definitions/loopFlow"
+        },
+        {
+          "$ref": "#/definitions/branchNode"
+        }
+      ]
+    },
+    "parameterizedNode": {
+      "type": "object",
+      "description": "Parameterized node call",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "patternProperties": {
+        "^[a-zA-Z_][a-zA-Z0-9._]*$": {
+          "type": "object",
+          "description": "Node parameters",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "subFlow": {
+      "type": "array",
+      "description": "Sub-flow (array of nodes)",
+      "items": {
+        "$ref": "#/definitions/flowNode"
+      },
+      "minItems": 1
+    },
+    "loopFlow": {
+      "type": "array",
+      "description": "Loop flow (double array with controller and actions)",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "array",
+        "description": "Loop nodes (first is controller, rest are actions)",
+        "items": {
+          "$ref": "#/definitions/flowNode"
+        },
+        "minItems": 1
+      }
+    },
+    "branchNode": {
+      "type": "object",
+      "description": "Branch node (executes based on previous node's edges)",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-zA-Z_][a-zA-Z0-9_]*$": {
+          "$ref": "#/definitions/flowNode"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "name": "Simple Sequential Workflow",
+      "description": "Executes nodes in sequence",
+      "nodes": [
+        "node1",
+        "node2",
+        "node3"
+      ]
+    },
+    {
+      "name": "Parameterized Workflow",
+      "description": "Nodes with parameters",
+      "nodes": [
+        {
+          "http.request.get": {
+            "url": "https://api.example.com/data",
+            "headers": {
+              "Authorization": "Bearer ${apiKey}"
+            }
+          }
+        },
+        {
+          "data.transform.mapper": {
+            "operation": "extract",
+            "path": "data.items"
+          }
+        }
+      ],
+      "initialState": {
+        "apiKey": "your-api-key"
+      }
+    },
+    {
+      "name": "Conditional Workflow",
+      "description": "Branches based on conditions",
+      "nodes": [
+        "logic.condition.if",
+        {
+          "success": "action.on.success",
+          "error": "action.on.error",
+          "default": "action.default"
+        }
+      ]
+    },
+    {
+      "name": "Loop Workflow",
+      "description": "Loops through actions",
+      "nodes": [
+        [
+          [
+            "logic.control.loop",
+            "action.in.loop",
+            "another.action"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "Sub-flow Workflow",
+      "description": "Groups nodes in sub-flows",
+      "nodes": [
+        "setup.node",
+        [
+          "subflow.node1",
+          "subflow.node2"
+        ],
+        "cleanup.node"
+      ]
+    }
+  ]
+}

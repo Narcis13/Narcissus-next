@@ -1,4 +1,3 @@
-import { Workflow, NodeDefinition } from "@/lib/workflow/types";
 import { 
   ExecutionContext, 
   ExecutionResult, 
@@ -15,12 +14,10 @@ export class ExecutionManager {
   private static instance: ExecutionManager;
   private immediateStrategy: ExecutionStrategy;
   private queuedStrategy: ExecutionStrategy;
-  private nodeDefinitions: Map<string, NodeDefinition>;
 
   private constructor() {
     this.immediateStrategy = new ImmediateExecutionStrategy();
     this.queuedStrategy = new QueuedExecutionStrategy();
-    this.nodeDefinitions = new Map();
   }
 
   static getInstance(): ExecutionManager {
@@ -30,12 +27,8 @@ export class ExecutionManager {
     return ExecutionManager.instance;
   }
 
-  setNodeDefinitions(definitions: Map<string, NodeDefinition>) {
-    this.nodeDefinitions = definitions;
-  }
-
   async execute(
-    workflow: Workflow,
+    workflow: any,
     context: ExecutionContext,
     options?: ExecutionOptions
   ): Promise<ExecutionResult> {
@@ -100,7 +93,7 @@ export class ExecutionManager {
   }
 
   private selectStrategy(
-    workflow: Workflow,
+    workflow: any,
     options?: ExecutionOptions
   ): ExecutionStrategy {
     // If mode is explicitly specified, use it
@@ -112,7 +105,7 @@ export class ExecutionManager {
     }
 
     // Auto mode: analyze workflow complexity
-    const complexity = ComplexityAnalyzer.analyze(workflow, this.nodeDefinitions);
+    const complexity = ComplexityAnalyzer.analyze(workflow);
     
     // Decision logic
     if (ComplexityAnalyzer.shouldUseQueue(complexity)) {
@@ -124,7 +117,7 @@ export class ExecutionManager {
     return this.immediateStrategy;
   }
 
-  getWorkflowComplexity(workflow: Workflow) {
-    return ComplexityAnalyzer.analyze(workflow, this.nodeDefinitions);
+  getWorkflowComplexity(workflow: any) {
+    return ComplexityAnalyzer.analyze(workflow);
   }
 }

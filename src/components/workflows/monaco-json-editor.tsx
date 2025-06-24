@@ -34,9 +34,11 @@ export default function MonacoJsonEditor({
           fileMatch: ["*"],
           schema: {
             type: "object",
+            required: ["name", "nodes"],
             properties: {
               name: {
                 type: "string",
+                minLength: 1,
                 description: "The name of the workflow",
               },
               description: {
@@ -45,134 +47,68 @@ export default function MonacoJsonEditor({
               },
               nodes: {
                 type: "array",
-                description: "The nodes that make up the workflow",
+                description: "Array of workflow nodes",
+                minItems: 1,
                 items: {
                   oneOf: [
                     {
                       type: "string",
-                      description: "Node ID reference",
+                      description: "Node ID reference (e.g. 'http.request.get')",
+                      pattern: "^[a-zA-Z_][a-zA-Z0-9._]*$"
                     },
                     {
                       type: "object",
-                      description: "Node with parameters",
-                      properties: {
-                        id: {
-                          type: "string",
-                          description: "Node ID",
-                        },
-                        params: {
+                      description: "Parameterized node call",
+                      minProperties: 1,
+                      maxProperties: 1,
+                      patternProperties: {
+                        "^[a-zA-Z_][a-zA-Z0-9._]*$": {
                           type: "object",
                           description: "Node parameters",
-                        },
+                          additionalProperties: true
+                        }
                       },
-                      required: ["id"],
+                      additionalProperties: false
                     },
                     {
                       type: "array",
-                      description: "Sub-flow or loop structure",
+                      description: "Sub-flow (array of nodes)",
+                      items: {
+                        "$ref": "#"
+                      },
+                      minItems: 1
                     },
-                  ],
+                    {
+                      type: "array",
+                      description: "Loop flow (double array with controller and actions)",
+                      minItems: 1,
+                      maxItems: 1,
+                      items: {
+                        type: "array",
+                        description: "Loop nodes (first is controller, rest are actions)",
+                        minItems: 1
+                      }
+                    },
+                    {
+                      type: "object",
+                      description: "Branch node (executes based on previous node's edges)",
+                      minProperties: 1,
+                      patternProperties: {
+                        "^[a-zA-Z_][a-zA-Z0-9_]*$": {
+                          "$ref": "#"
+                        }
+                      },
+                      additionalProperties: false
+                    }
+                  ]
                 },
               },
-              connections: {
-                type: "array",
-                description: "Connections between nodes",
-                items: {
-                  type: "object",
-                  properties: {
-                    from: {
-                      type: "string",
-                      description: "Source node ID",
-                    },
-                    to: {
-                      type: "string",
-                      description: "Target node ID",
-                    },
-                    fromPort: {
-                      type: "string",
-                      description: "Source port name",
-                    },
-                    toPort: {
-                      type: "string",
-                      description: "Target port name",
-                    },
-                  },
-                  required: ["from", "to"],
-                },
-              },
-              variables: {
+              initialState: {
                 type: "object",
-                description: "Workflow variables",
+                description: "Initial state for the workflow (accessible via ${path.to.value} in parameters or state.get/set in node implementations)",
                 additionalProperties: true,
               },
-              inputs: {
-                type: "object",
-                description: "Workflow input definitions",
-                additionalProperties: {
-                  type: "object",
-                  properties: {
-                    type: {
-                      type: "string",
-                      enum: ["string", "number", "boolean", "object", "array"],
-                    },
-                    required: {
-                      type: "boolean",
-                    },
-                    default: {},
-                    description: {
-                      type: "string",
-                    },
-                  },
-                },
-              },
-              outputs: {
-                type: "object",
-                description: "Workflow output definitions",
-                additionalProperties: {
-                  type: "object",
-                  properties: {
-                    type: {
-                      type: "string",
-                      enum: ["string", "number", "boolean", "object", "array"],
-                    },
-                    description: {
-                      type: "string",
-                    },
-                  },
-                },
-              },
-              config: {
-                type: "object",
-                description: "Workflow configuration",
-                properties: {
-                  retryPolicy: {
-                    type: "object",
-                    properties: {
-                      maxAttempts: {
-                        type: "number",
-                        minimum: 1,
-                        maximum: 10,
-                      },
-                      backoffMultiplier: {
-                        type: "number",
-                        minimum: 1,
-                      },
-                    },
-                  },
-                  timeout: {
-                    type: "number",
-                    description: "Timeout in seconds",
-                    minimum: 0,
-                  },
-                  maxConcurrency: {
-                    type: "number",
-                    description: "Maximum concurrent executions",
-                    minimum: 1,
-                  },
-                },
-              },
             },
-            required: ["nodes"],
           },
         },
       ],
@@ -188,11 +124,11 @@ export default function MonacoJsonEditor({
           endColumn: position.column,
         });
 
-        // Check if we're in a nodes array context
+        // Check if we're in a nodes array context or typing a string
         const inNodesContext = /\"nodes\"\s*:\s*\[[^]*$/.test(textUntilPosition);
-        const inNodeId = /\"id\"\s*:\s*\"[^"]*$/.test(textUntilPosition);
+        const typingString = /\"[^"]*$/.test(textUntilPosition) && inNodesContext;
 
-        if (inNodesContext || inNodeId) {
+        if (typingString) {
           // Common node IDs from the FlowManager system
           const nodeIds = [
             // Logic nodes

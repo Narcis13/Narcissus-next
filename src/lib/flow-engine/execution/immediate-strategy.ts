@@ -1,4 +1,3 @@
-import { Workflow } from "@/lib/workflow/types";
 import { 
   ExecutionContext, 
   ExecutionResult, 
@@ -12,7 +11,7 @@ export class ImmediateExecutionStrategy extends BaseExecutionStrategy {
   private executionTimeouts = new Map<string, NodeJS.Timeout>();
 
   async execute(
-    workflow: Workflow,
+    workflow: any,
     context: ExecutionContext,
     options?: ExecutionOptions
   ): Promise<ExecutionResult> {

@@ -7,12 +7,13 @@ import Link from "next/link";
 export default async function WorkflowsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string; sort?: string; order?: string };
+  searchParams: Promise<{ page?: string; search?: string; sort?: string; order?: string }>;
 }) {
-  const page = Number(searchParams.page) || 1;
-  const search = searchParams.search || "";
-  const sortBy = (searchParams.sort as any) || "updatedAt";
-  const sortOrder = (searchParams.order as any) || "desc";
+  const params = await searchParams;
+  const page = Number(params.page) || 1;
+  const search = params.search || "";
+  const sortBy = params.sort as "name" | "createdAt" | "updatedAt" | "lastRun" || "updatedAt";
+  const sortOrder = params.order as "desc" | "asc" || "desc";
 
   return (
     <div className="container mx-auto px-4 py-8">

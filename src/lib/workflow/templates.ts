@@ -26,16 +26,16 @@ export const workflowTemplates: WorkflowTemplate[] = [
       nodes: [
         // Fetch data from API
         {
-          "http.request.get": {
-            url: "${config.apiUrl}",
+          "HTTP GET Request": {
+            url: "${apiUrl}",
             headers: {
-              "Authorization": "Bearer ${config.apiKey}"
+              "Authorization": "Bearer ${apiKey}"
             }
           }
         },
         // Transform the data
         {
-          "data.transform.mapper": {
+          "Transform Data": {
             operation: "extract",
             path: "data.items",
             transformations: [
@@ -51,13 +51,13 @@ export const workflowTemplates: WorkflowTemplate[] = [
           }
         },
         // Check condition
-        "logic.condition.if",
+        "Check Condition",
         {
           "hasIssues": [
             // Send alert email
             {
-              "communication.email.send": {
-                to: "${config.alertEmail}",
+              "Send Email": {
+                to: "${alertEmail}",
                 subject: "Alert: Issues Detected",
                 body: "Found ${state.issueCount} issues in the latest data fetch."
               }
@@ -66,7 +66,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
           "success": [
             // Log success
             {
-              "utility.log.info": {
+              "Log Info": {
                 message: "Data processed successfully. No issues found."
               }
             }
@@ -74,15 +74,14 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Add delay before next run
         {
-          "logic.control.delay": {
+          "Delay": {
             duration: 3600 // 1 hour
           }
         }
       ],
-      variables: {
-        issueThreshold: 5
-      },
-      config: {
+      initialState: {
+        issueCount: 0,
+        issueThreshold: 5,
         apiUrl: "https://api.example.com/data",
         apiKey: "your-api-key",
         alertEmail: "admin@example.com"
@@ -101,14 +100,14 @@ export const workflowTemplates: WorkflowTemplate[] = [
       nodes: [
         // Receive webhook (chat message)
         {
-          "http.webhook.receive": {
+          "Receive Webhook": {
             path: "/chat",
             method: "POST"
           }
         },
         // Extract message data
         {
-          "data.transform.mapper": {
+          "Extract Data": {
             operation: "extract",
             transformations: [
               {
@@ -128,13 +127,13 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Get conversation history
         {
-          "database.query.select": {
+          "Database Query": {
             query: "SELECT * FROM conversations WHERE id = ${state.conversationId} ORDER BY created_at DESC LIMIT 10"
           }
         },
         // Prepare AI context
         {
-          "data.transform.mapper": {
+          "Prepare AI Context": {
             operation: "custom",
             code: `
               const history = input.map(msg => ({
@@ -152,7 +151,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Call AI model
         {
-          "ai.openai.completion": {
+          "OpenAI Completion": {
             model: "gpt-4",
             messages: "${input.messages}",
             temperature: 0.7,
@@ -161,7 +160,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Save response to database
         {
-          "database.query.insert": {
+          "Database Insert": {
             table: "conversations",
             data: {
               conversation_id: "${state.conversationId}",
@@ -174,7 +173,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Send response back
         {
-          "http.webhook.respond": {
+          "Webhook Response": {
             status: 200,
             body: {
               response: "${input.content}",
@@ -183,7 +182,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
           }
         }
       ],
-      config: {
+      initialState: {
         openaiApiKey: "your-openai-api-key",
         maxConversationLength: 10
       }
@@ -201,19 +200,19 @@ export const workflowTemplates: WorkflowTemplate[] = [
       nodes: [
         // Start with scheduling trigger
         {
-          "trigger.schedule.cron": {
+          "Schedule Trigger": {
             expression: "0 2 * * *" // Daily at 2 AM
           }
         },
         // Extract from multiple sources in parallel
         [
           {
-            "database.query.select": {
+            "Query Database": {
               query: "SELECT * FROM source_table WHERE updated_at > ${state.lastRunTime}"
             }
           },
           {
-            "http.request.get": {
+            "Fetch External API": {
               url: "https://api.external.com/export",
               params: {
                 since: "${state.lastRunTime}"
@@ -221,7 +220,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
             }
           },
           {
-            "storage.file.read": {
+            "Read CSV File": {
               path: "/data/imports/latest.csv",
               format: "csv"
             }
@@ -229,14 +228,14 @@ export const workflowTemplates: WorkflowTemplate[] = [
         ],
         // Merge all data sources
         {
-          "data.combine.merge": {
+          "Merge Data": {
             strategy: "concat",
             deduplicateBy: "id"
           }
         },
         // Transform data
         {
-          "data.transform.mapper": {
+          "Transform Data": {
             operation: "map",
             transformations: [
               {
@@ -256,7 +255,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Validate data
         {
-          "data.validate.schema": {
+          "Validate Schema": {
             schema: {
               type: "array",
               items: {
@@ -273,14 +272,14 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Process in batches
         {
-          "data.batch.process": {
+          "Batch Process": {
             batchSize: 1000,
             parallel: 5
           }
         },
         // Load to destination
         {
-          "database.query.insert": {
+          "Insert to Database": {
             table: "processed_data",
             onConflict: "update",
             conflictColumns: ["id"]
@@ -288,7 +287,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Generate report
         {
-          "data.aggregate.stats": {
+          "Calculate Stats": {
             operations: [
               { type: "count", as: "totalRecords" },
               { type: "sum", field: "amount", as: "totalAmount" },
@@ -298,17 +297,15 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Send summary email
         {
-          "communication.email.send": {
-            to: "${config.reportEmail}",
+          "Send Summary Email": {
+            to: "${reportEmail}",
             subject: "Data Processing Complete - ${new Date().toLocaleDateString()}",
             body: "Processed ${input.totalRecords} records. Total: $${input.totalAmount}, Average: $${input.averageAmount}"
           }
         }
       ],
-      variables: {
-        lastRunTime: null
-      },
-      config: {
+      initialState: {
+        lastRunTime: null,
         reportEmail: "data-team@example.com",
         retryPolicy: {
           maxAttempts: 3,
@@ -329,22 +326,22 @@ export const workflowTemplates: WorkflowTemplate[] = [
       nodes: [
         // Receive webhook
         {
-          "http.webhook.receive": {
+          "Receive Webhook": {
             path: "/webhook/events",
             method: "POST"
           }
         },
         // Validate webhook signature
         {
-          "security.validate.hmac": {
-            secret: "${config.webhookSecret}",
+          "Validate HMAC": {
+            secret: "${webhookSecret}",
             payload: "${input.body}",
             signature: "${input.headers['x-signature']}"
           }
         },
         // Parse event type
         {
-          "data.transform.mapper": {
+          "Parse Event": {
             operation: "extract",
             transformations: [
               {
@@ -359,12 +356,12 @@ export const workflowTemplates: WorkflowTemplate[] = [
           }
         },
         // Route based on event type
-        "logic.condition.switch",
+        "Route by Event Type",
         {
           "user.created": [
             // Create user in database
             {
-              "database.query.insert": {
+              "Create User": {
                 table: "users",
                 data: {
                   external_id: "${state.eventData.id}",
@@ -375,7 +372,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
             },
             // Send welcome email
             {
-              "communication.email.send": {
+              "Send Welcome Email": {
                 to: "${state.eventData.email}",
                 subject: "Welcome!",
                 template: "welcome",
@@ -388,7 +385,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
           "payment.completed": [
             // Update order status
             {
-              "database.query.update": {
+              "Update Order": {
                 table: "orders",
                 where: {
                   id: "${state.eventData.order_id}"
@@ -401,8 +398,8 @@ export const workflowTemplates: WorkflowTemplate[] = [
             },
             // Trigger fulfillment
             {
-              "http.request.post": {
-                url: "${config.fulfillmentApi}/orders",
+              "Trigger Fulfillment": {
+                url: "${fulfillmentApi}/orders",
                 body: {
                   orderId: "${state.eventData.order_id}",
                   items: "${state.eventData.items}"
@@ -413,7 +410,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
           "subscription.cancelled": [
             // Update subscription
             {
-              "database.query.update": {
+              "Update Subscription": {
                 table: "subscriptions",
                 where: {
                   id: "${state.eventData.subscription_id}"
@@ -426,7 +423,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
             },
             // Notify team
             {
-              "communication.slack.message": {
+              "Send Slack Message": {
                 channel: "#subscriptions",
                 text: "Subscription cancelled: ${state.eventData.customer_email}"
               }
@@ -435,7 +432,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
           "default": [
             // Log unknown event
             {
-              "utility.log.warn": {
+              "Log Warning": {
                 message: "Unknown event type: ${state.eventType}",
                 data: "${state.eventData}"
               }
@@ -444,7 +441,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
         },
         // Send acknowledgment
         {
-          "http.webhook.respond": {
+          "Send Webhook Response": {
             status: 200,
             body: {
               received: true,
@@ -454,7 +451,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
           }
         }
       ],
-      config: {
+      initialState: {
         webhookSecret: "your-webhook-secret",
         fulfillmentApi: "https://api.fulfillment.com"
       }

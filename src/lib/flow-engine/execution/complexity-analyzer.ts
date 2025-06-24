@@ -1,5 +1,11 @@
-import { Workflow, NodeDefinition } from "@/lib/workflow/types";
 import { WorkflowComplexity } from "./types";
+import { 
+  isParameterizedNode,
+  isSubFlow,
+  isLoop,
+  isBranchNode,
+  isStringNode
+} from "@/lib/workflow/types/flowmanager-workflow";
 
 export class ComplexityAnalyzer {
   private static readonly EXTERNAL_NODE_PATTERNS = [
@@ -32,47 +38,64 @@ export class ComplexityAnalyzer {
     default: 100,
   };
 
-  static analyze(
-    workflow: Workflow,
-    nodeDefinitions: Map<string, NodeDefinition>
-  ): WorkflowComplexity {
-    const nodeCount = workflow.nodes.length;
+  static analyze(workflow: any): WorkflowComplexity {
+    let nodeCount = 0;
     let hasExternalCalls = false;
     let hasLoops = false;
     let hasParallelExecution = false;
     let requiresHumanInput = false;
     let estimatedDuration = 0;
 
-    // Analyze nodes
-    for (const node of workflow.nodes) {
-      const nodeId = node.nodeId;
+    // Analyze nodes recursively
+    const analyzeNode = (node: any) => {
+      nodeCount++;
       
-      // Check for external calls
-      if (this.isExternalNode(nodeId)) {
-        hasExternalCalls = true;
-      }
-
-      // Check for loops
-      if (this.isLoopNode(nodeId)) {
+      if (isStringNode(node)) {
+        // String node reference
+        if (this.isExternalNode(node)) {
+          hasExternalCalls = true;
+        }
+        if (this.isLoopNode(node)) {
+          hasLoops = true;
+        }
+        if (this.isHumanInputNode(node)) {
+          requiresHumanInput = true;
+        }
+        estimatedDuration += this.getNodeExecutionTime(node);
+      } else if (isParameterizedNode(node)) {
+        // Parameterized node
+        const nodeId = Object.keys(node)[0];
+        if (this.isExternalNode(nodeId)) {
+          hasExternalCalls = true;
+        }
+        if (this.isLoopNode(nodeId)) {
+          hasLoops = true;
+        }
+        if (this.isHumanInputNode(nodeId)) {
+          requiresHumanInput = true;
+        }
+        estimatedDuration += this.getNodeExecutionTime(nodeId);
+      } else if (isSubFlow(node)) {
+        // Sub-flow
+        hasParallelExecution = true; // Sub-flows can run in parallel
+        node.forEach(analyzeNode);
+      } else if (isLoop(node)) {
+        // Loop structure
         hasLoops = true;
+        node[0].forEach(analyzeNode);
+        estimatedDuration *= 3; // Assume average 3 iterations
+      } else if (isBranchNode(node)) {
+        // Branch node
+        Object.values(node).forEach(analyzeNode);
       }
+    };
 
-      // Check for human input
-      if (this.isHumanInputNode(nodeId)) {
-        requiresHumanInput = true;
-      }
-
-      // Estimate execution time
-      estimatedDuration += this.getNodeExecutionTime(nodeId);
+    // Analyze all nodes
+    if (workflow.nodes && Array.isArray(workflow.nodes)) {
+      workflow.nodes.forEach(analyzeNode);
     }
 
-    // Check for parallel execution by analyzing connections
-    hasParallelExecution = this.hasParallelPaths(workflow);
-
-    // Adjust duration for loops and parallel execution
-    if (hasLoops) {
-      estimatedDuration *= 3; // Assume average 3 iterations
-    }
+    // Adjust duration for parallel execution
     if (hasParallelExecution) {
       estimatedDuration *= 0.7; // Parallel execution reduces total time
     }
@@ -114,29 +137,6 @@ export class ComplexityAnalyzer {
     return this.NODE_EXECUTION_TIMES.default;
   }
 
-  private static hasParallelPaths(workflow: Workflow): boolean {
-    // Build adjacency list
-    const graph = new Map<string, Set<string>>();
-    
-    for (const connection of workflow.connections) {
-      const source = connection.source.nodeId;
-      const target = connection.target.nodeId;
-      
-      if (!graph.has(source)) {
-        graph.set(source, new Set());
-      }
-      graph.get(source)!.add(target);
-    }
-
-    // Check if any node has multiple outgoing connections
-    for (const [_, targets] of graph) {
-      if (targets.size > 1) {
-        return true;
-      }
-    }
-
-    return false;
-  }
 
   static shouldUseQueue(complexity: WorkflowComplexity): boolean {
     // Use queue if:

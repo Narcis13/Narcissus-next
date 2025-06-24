@@ -73,7 +73,7 @@ export default function WorkflowForm({ workflow, initialTemplate }: WorkflowForm
               name: "My Workflow",
               description: "Workflow description",
               nodes: [],
-              connections: [],
+              initialState: {}
             },
             null,
             2

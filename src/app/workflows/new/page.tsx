@@ -3,12 +3,13 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getTemplateById } from "@/lib/workflow/templates";
 
-export default function NewWorkflowPage({
+export default async function NewWorkflowPage({
   searchParams,
 }: {
-  searchParams: { template?: string };
+  searchParams: Promise<{ template?: string }>;
 }) {
-  const template = searchParams.template ? getTemplateById(searchParams.template) : undefined;
+  const params = await searchParams;
+  const template = params.template ? getTemplateById(params.template) : undefined;
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">

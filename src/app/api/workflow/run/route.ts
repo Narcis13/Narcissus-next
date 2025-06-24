@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { ExecutionManager, ExecutionContext, ExecutionOptions } from '@/lib/flow-engine/execution';
-import { Workflow } from '@/lib/workflow/types';
 
 export async function POST(request: Request) {
     try {
