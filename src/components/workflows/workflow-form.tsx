@@ -6,9 +6,10 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createWorkflow, updateWorkflow } from "@/lib/workflow/workflow-actions";
-import { Save, AlertCircle, FileJson, Code2 } from "lucide-react";
+import { Save, AlertCircle, FileJson, Code2, FileText, Sparkles } from "lucide-react";
 import type { Workflow } from "@/db/schema";
 import dynamic from "next/dynamic";
+import { workflowTemplates } from "@/lib/workflow/templates";
 
 // Dynamically import Monaco to avoid SSR issues
 const MonacoJsonEditor = dynamic(
@@ -40,14 +41,16 @@ type WorkflowFormData = z.infer<typeof workflowSchema>;
 
 interface WorkflowFormProps {
   workflow?: Workflow;
+  initialTemplate?: typeof workflowTemplates[0];
 }
 
-export default function WorkflowForm({ workflow }: WorkflowFormProps) {
+export default function WorkflowForm({ workflow, initialTemplate }: WorkflowFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [jsonValidationErrors, setJsonValidationErrors] = useState<any[]>([]);
   const [useCodeEditor, setUseCodeEditor] = useState(true);
+  const [showTemplates, setShowTemplates] = useState(!workflow);
 
   const {
     register,
@@ -59,10 +62,12 @@ export default function WorkflowForm({ workflow }: WorkflowFormProps) {
   } = useForm<WorkflowFormData>({
     resolver: zodResolver(workflowSchema),
     defaultValues: {
-      name: workflow?.name || "",
-      description: workflow?.description || "",
+      name: workflow?.name || initialTemplate?.workflow.name || "",
+      description: workflow?.description || initialTemplate?.workflow.description || "",
       jsonData: workflow?.jsonData
         ? JSON.stringify(workflow.jsonData, null, 2)
+        : initialTemplate
+        ? JSON.stringify(initialTemplate.workflow, null, 2)
         : JSON.stringify(
             {
               name: "My Workflow",
@@ -114,8 +119,76 @@ export default function WorkflowForm({ workflow }: WorkflowFormProps) {
     jsonError = e instanceof Error ? e.message : "Invalid JSON";
   }
 
+  const handleTemplateSelect = (template: typeof workflowTemplates[0]) => {
+    setValue("name", template.workflow.name);
+    setValue("description", template.workflow.description);
+    setValue("jsonData", JSON.stringify(template.workflow, null, 2));
+    setShowTemplates(false);
+  };
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <div className="space-y-6">
+      {/* Template Selection */}
+      {!workflow && showTemplates && (
+        <div className="card bg-base-100 shadow-xl">
+          <div className="card-body">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="card-title flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Start with a Template
+              </h2>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowTemplates(false)}
+              >
+                Start from scratch
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {workflowTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="card bg-base-200 hover:bg-base-300 cursor-pointer transition-colors"
+                  onClick={() => handleTemplateSelect(template)}
+                >
+                  <div className="card-body">
+                    <h3 className="card-title text-lg">
+                      <span className="text-2xl">{template.icon}</span>
+                      {template.name}
+                    </h3>
+                    <p className="text-sm text-base-content/70">
+                      {template.description}
+                    </p>
+                    <div className="card-actions justify-end mt-2">
+                      <span className="badge badge-outline badge-sm">
+                        {template.category}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Show templates button if hidden */}
+      {!workflow && !showTemplates && (
+        <div className="text-center">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowTemplates(true)}
+          >
+            <FileText className="w-4 h-4" />
+            Use a template
+          </button>
+        </div>
+      )}
+
+      <form onSubmit={onSubmit} className="space-y-6">
       {error && (
         <div className="alert alert-error">
           <AlertCircle className="w-4 h-4" />
@@ -259,6 +332,7 @@ export default function WorkflowForm({ workflow }: WorkflowFormProps) {
           {workflow ? "Update Workflow" : "Create Workflow"}
         </button>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }

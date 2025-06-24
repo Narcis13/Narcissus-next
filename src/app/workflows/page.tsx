@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getWorkflows } from "@/lib/workflow/workflow-actions";
 import WorkflowList from "@/components/workflows/workflow-list";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import Link from "next/link";
 
 export default async function WorkflowsPage({
@@ -23,10 +23,16 @@ export default async function WorkflowsPage({
             Manage your automation workflows
           </p>
         </div>
-        <Link href="/workflows/new" className="btn btn-primary">
-          <Plus className="w-4 h-4" />
-          New Workflow
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/workflows/templates" className="btn btn-outline">
+            <FileText className="w-4 h-4" />
+            Browse Templates
+          </Link>
+          <Link href="/workflows/new" className="btn btn-primary">
+            <Plus className="w-4 h-4" />
+            New Workflow
+          </Link>
+        </div>
       </div>
 
       <Suspense

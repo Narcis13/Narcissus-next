@@ -1,8 +1,14 @@
 import WorkflowForm from "@/components/workflows/workflow-form";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getTemplateById } from "@/lib/workflow/templates";
 
-export default function NewWorkflowPage() {
+export default function NewWorkflowPage({
+  searchParams,
+}: {
+  searchParams: { template?: string };
+}) {
+  const template = searchParams.template ? getTemplateById(searchParams.template) : undefined;
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -18,7 +24,7 @@ export default function NewWorkflowPage() {
           Design your automation workflow using our visual editor or JSON code
         </p>
         
-        <WorkflowForm />
+        <WorkflowForm initialTemplate={template} />
       </div>
     </div>
   );

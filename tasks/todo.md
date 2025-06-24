@@ -144,11 +144,11 @@
   - [x] Format/prettify (automatic on paste/type)
   - [x] Find/replace functionality (built into Monaco)
   - [x] Undo/redo support (Ctrl+Z/Ctrl+Y)
-- [ ] Create workflow templates
-  - [ ] Basic automation template
-  - [ ] AI chat workflow template
-  - [ ] Data processing template
-  - [ ] Webhook handler template
+- [x] Create workflow templates ✓ (Completed)
+  - [x] Basic automation template
+  - [x] AI chat workflow template
+  - [x] Data processing template
+  - [x] Webhook handler template
 
 ### Workflow Visualization
 - [ ] Implement React Flow viewer
@@ -465,7 +465,21 @@
   - Schema-based validation
   - IntelliSense for node IDs
 
-- **Next**: Create workflow templates
+- **Completed**:
+  - Workflow templates system
+  - Created `src/lib/workflow/templates.ts` - Template definitions
+  - Created `src/app/workflows/templates/page.tsx` - Templates browse page
+  - Updated workflow form to show template selector
+  - Added template parameter support in new workflow page
+  - Templates include:
+    - Basic Automation: API fetch, transform, conditional email
+    - AI Chat Workflow: Webhook receive, conversation history, AI response
+    - Data Processing: ETL pipeline with multiple sources, batch processing
+    - Webhook Handler: Event routing, validation, custom processing
+  - Each template has icon, category, and complete workflow JSON
+  - Templates use FlowManager-compatible node structure
+
+- **Next**: Phase 3 UI tasks completed. Ready for React Flow visualization discussion
 
 ---
 
