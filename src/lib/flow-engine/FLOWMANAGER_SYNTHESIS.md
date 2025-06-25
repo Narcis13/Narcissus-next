@@ -6,7 +6,7 @@ The FlowManager is a powerful and flexible engine for orchestrating complex work
 
 ## Core Components
 
-### 1. FlowManager (`FlowManager.js`)
+### 1. FlowManager (`FlowManager.js`) file location: /src/lib/flow-engine/core/FlowManager.js
 - **Purpose**: Main orchestration engine for workflow execution
 - **Key Features**:
   - Executes nodes in sequence based on workflow definition
@@ -15,7 +15,7 @@ The FlowManager is a powerful and flexible engine for orchestrating complex work
   - Handles complex control flow (loops, branches, sub-flows)
   - Emits events for monitoring and debugging
 
-### 2. FlowHub (`FlowHub.js`)
+### 2. FlowHub (`FlowHub.js`) file location: /src/lib/flow-engine/core/FlowHub.js
 - **Purpose**: Singleton event manager for cross-flow communication
 - **Key Features**:
   - Handles pause/resume operations for human-in-the-loop workflows
@@ -23,7 +23,7 @@ The FlowManager is a powerful and flexible engine for orchestrating complex work
   - Manages flow events (start, step, end, pause, resume)
   - Enables cross-context communication between flows
 
-### 3. NodeRegistry (`NodeRegistry.js`)
+### 3. NodeRegistry (`NodeRegistry.js`) file location: /src/lib/flow-engine/core/NodeRegistry.js
 - **Purpose**: Central registry for all available node definitions
 - **Key Features**:
   - Node registration and retrieval

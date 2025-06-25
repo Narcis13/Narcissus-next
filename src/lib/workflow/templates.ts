@@ -8,6 +8,7 @@ export interface WorkflowTemplate {
     name: string;
     description: string;
     nodes: any[];
+    initialState: Record<string, any>;
     variables?: Record<string, any>;
     config?: Record<string, any>;
   };

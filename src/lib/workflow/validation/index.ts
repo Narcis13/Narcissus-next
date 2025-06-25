@@ -7,8 +7,7 @@ export { FlowManagerValidator } from "./flowmanager-validator";
 export { FlowManagerValidator as WorkflowValidator } from "./flowmanager-validator";
 
 // Legacy validators (kept for reference but not used)
-export { WorkflowValidator as LegacyWorkflowValidator } from "./workflow-validator";
-export { ConnectionValidator } from "./connection-validator";
+
 
 // Re-export validation types
 export type {

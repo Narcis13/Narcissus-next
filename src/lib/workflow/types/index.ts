@@ -16,3 +16,4 @@ export * from "./workflow";
 
 // Execution types
 export * from "./execution";
+export type { ExecutionError } from "./base";
