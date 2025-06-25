@@ -3,14 +3,14 @@ import { ExecutionManager } from '@/lib/flow-engine/execution';
 import { flowHub } from '@/lib/flow-engine/singletons';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     executionId: string;
-  };
+  }>;
 }
 
 // GET /api/workflow/execution/[executionId]/stream - Stream execution updates
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const { executionId } = params;
+  const { executionId } = await params;
   
   // Create SSE response
   const stream = new ReadableStream({

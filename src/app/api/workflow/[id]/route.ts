@@ -3,10 +3,11 @@ import { getWorkflow } from '@/lib/workflow/workflow-actions';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const workflow = await getWorkflow(params.id);
+    const { id } = await params;
+    const workflow = await getWorkflow(id);
     
     return NextResponse.json({
       id: workflow.id,

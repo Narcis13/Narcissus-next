@@ -157,25 +157,26 @@ function setupFlowEventListeners(
   };
 }
 
-// Start worker if running in Node.js environment
-if (typeof process !== "undefined" && process.env.NODE_ENV !== "test") {
-  let worker: Worker | null = null;
+// Worker instance
+let worker: Worker | null = null;
 
-  // Function to start the worker
-  export const startWorker = () => {
+// Function to start the worker
+export const startWorker = () => {
+  if (typeof process !== "undefined" && process.env.NODE_ENV !== "test") {
     if (!worker) {
       worker = createFlowExecutionWorker();
       console.log("Flow execution worker started");
     }
     return worker;
-  };
+  }
+  return null;
+};
 
-  // Function to stop the worker
-  export const stopWorker = async () => {
-    if (worker) {
-      await worker.close();
-      worker = null;
-      console.log("Flow execution worker stopped");
-    }
-  };
-}
+// Function to stop the worker
+export const stopWorker = async () => {
+  if (worker) {
+    await worker.close();
+    worker = null;
+    console.log("Flow execution worker stopped");
+  }
+};

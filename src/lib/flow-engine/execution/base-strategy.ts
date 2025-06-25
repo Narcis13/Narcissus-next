@@ -1,5 +1,5 @@
 import { FlowManager } from "@/lib/flow-engine/core/FlowManager.js";
-import { nodeRegistry, flowHub } from "@/lib/flow-engine/singletons";
+import { nodeRegistry } from "@/lib/flow-engine/singletons";
 import { 
   ExecutionContext, 
   ExecutionResult, 
@@ -65,21 +65,29 @@ export abstract class BaseExecutionStrategy implements ExecutionStrategy {
       initialInput: context.input
     });
 
-    // Listen to flow events
-    if (onStep) {
-      flowHub.on("flowManagerStep", (data: any) => {
-        if (data.flowInstanceId === context.executionId) {
-          const step: ExecutionStep = {
-            nodeId: data.nodeId || "unknown",
-            status: "completed",
-            startedAt: new Date(data.timestamp),
-            completedAt: new Date(),
-            input: data.input,
-            output: data.output,
-          };
-          onStep(step);
+    // Listen to flow events only in server environment
+    if (onStep && typeof window === 'undefined') {
+      try {
+        // Dynamically import flowHub only on server
+        const { flowHub } = require("@/lib/flow-engine/singletons");
+        if (typeof flowHub?.on === 'function') {
+          flowHub.on("flowManagerStep", (data: any) => {
+            if (data.flowInstanceId === context.executionId) {
+              const step: ExecutionStep = {
+                nodeId: data.nodeId || "unknown",
+                status: "completed",
+                startedAt: new Date(data.timestamp),
+                completedAt: new Date(),
+                input: data.input,
+                output: data.output,
+              };
+              onStep(step);
+            }
+          });
         }
-      });
+      } catch (error) {
+        console.warn("FlowHub not available in this environment");
+      }
     }
 
     return fm;

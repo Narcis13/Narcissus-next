@@ -97,48 +97,48 @@ export default async function RootLayout({
               <NavigationMenu className="hidden lg:flex mx-6">
                 <NavigationMenuList>
                   <NavigationMenuItem>
-                    <Link href="/" legacyBehavior passHref>
-                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    <NavigationMenuLink asChild>
+                      <Link href="/" className={navigationMenuTriggerStyle()}>
                         Home
-                      </NavigationMenuLink>
-                    </Link>
+                      </Link>
+                    </NavigationMenuLink>
                   </NavigationMenuItem>
                   {session && (
                     <>
                       <NavigationMenuItem>
-                        <Link href="/dashboard" legacyBehavior passHref>
-                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink asChild>
+                          <Link href="/dashboard" className={navigationMenuTriggerStyle()}>
                             Dashboard
-                          </NavigationMenuLink>
-                        </Link>
+                          </Link>
+                        </NavigationMenuLink>
                       </NavigationMenuItem>
                       <NavigationMenuItem>
-                        <Link href="/workflows" legacyBehavior passHref>
-                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink asChild>
+                          <Link href="/workflows" className={navigationMenuTriggerStyle()}>
                             Workflows
-                          </NavigationMenuLink>
-                        </Link>
+                          </Link>
+                        </NavigationMenuLink>
                       </NavigationMenuItem>
                       <NavigationMenuItem>
-                        <Link href="/posts" legacyBehavior passHref>
-                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink asChild>
+                          <Link href="/posts" className={navigationMenuTriggerStyle()}>
                             Posts
-                          </NavigationMenuLink>
-                        </Link>
+                          </Link>
+                        </NavigationMenuLink>
                       </NavigationMenuItem>
                       <NavigationMenuItem>
-                        <Link href="/credentials" legacyBehavior passHref>
-                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink asChild>
+                          <Link href="/credentials" className={navigationMenuTriggerStyle()}>
                             Credentials
-                          </NavigationMenuLink>
-                        </Link>
+                          </Link>
+                        </NavigationMenuLink>
                       </NavigationMenuItem>
                       <NavigationMenuItem>
-                        <Link href="/profile" legacyBehavior passHref>
-                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <NavigationMenuLink asChild>
+                          <Link href="/profile" className={navigationMenuTriggerStyle()}>
                             Profile
-                          </NavigationMenuLink>
-                        </Link>
+                          </Link>
+                        </NavigationMenuLink>
                       </NavigationMenuItem>
                     </>
                   )}

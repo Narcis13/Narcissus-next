@@ -2,15 +2,15 @@ import { NextResponse } from 'next/server';
 import { ExecutionManager } from '@/lib/flow-engine/execution';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     executionId: string;
-  };
+  }>;
 }
 
 // GET /api/workflow/execution/[executionId]/progress - Get execution progress
 export async function GET(request: Request, { params }: RouteParams) {
   try {
-    const { executionId } = params;
+    const { executionId } = await params;
     
     const executionManager = ExecutionManager.getInstance();
     const progress = await executionManager.getProgress(executionId);

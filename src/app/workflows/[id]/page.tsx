@@ -1,18 +1,22 @@
 import { getWorkflow } from "@/lib/workflow/workflow-actions";
+import { getWorkflowExecutions } from "@/lib/workflow/execution-actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Edit, Play, Code2 } from "lucide-react";
+import { ArrowLeft, Edit, Play, Code2, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import WorkflowJsonViewer from "@/components/workflows/workflow-json-viewer";
 
 export default async function WorkflowDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   let workflow;
+  let recentExecutions;
   try {
-    workflow = await getWorkflow(params.id);
+    workflow = await getWorkflow(id);
+    recentExecutions = await getWorkflowExecutions(id);
   } catch (error) {
     notFound();
   }
@@ -59,6 +63,13 @@ export default async function WorkflowDetailPage({
               <Edit className="w-4 h-4" />
               Edit
             </Link>
+            <Link
+              href={`/workflows/${workflow.id}/executions`}
+              className="btn btn-outline"
+            >
+              <Clock className="w-4 h-4" />
+              Executions
+            </Link>
           </div>
         </div>
 
@@ -90,13 +101,50 @@ export default async function WorkflowDetailPage({
           </div>
         </div>
 
-        {/* Execution History Placeholder */}
+        {/* Execution History */}
         <div className="card bg-base-100 shadow-xl mt-6">
           <div className="card-body">
-            <h2 className="card-title mb-4">Recent Executions</h2>
-            <div className="text-center py-8 text-base-content/60">
-              <p>Execution history will be displayed here</p>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="card-title">Recent Executions</h2>
+              <Link 
+                href={`/workflows/${workflow.id}/executions`}
+                className="btn btn-ghost btn-sm"
+              >
+                View All
+                <Clock className="w-4 h-4 ml-2" />
+              </Link>
             </div>
+            {recentExecutions && recentExecutions.length > 0 ? (
+              <div className="space-y-2">
+                {recentExecutions.slice(0, 5).map((execution) => (
+                  <div key={execution.id} className="flex justify-between items-center p-3 bg-base-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <span className={`badge badge-sm ${
+                        execution.status === 'completed' ? 'badge-success' :
+                        execution.status === 'failed' ? 'badge-error' :
+                        execution.status === 'running' ? 'badge-info' :
+                        'badge-warning'
+                      }`}>
+                        {execution.status}
+                      </span>
+                      <span className="text-sm">
+                        {formatDistanceToNow(new Date(execution.startedAt), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <Link 
+                      href={`/workflows/${workflow.id}/executions`}
+                      className="btn btn-xs btn-ghost"
+                    >
+                      Details
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-base-content/60">
+                <p>No executions yet</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

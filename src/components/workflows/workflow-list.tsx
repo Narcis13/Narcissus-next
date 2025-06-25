@@ -159,9 +159,12 @@ export default function WorkflowList({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          workflowId: id,
-          nodes: workflow.nodes, 
-          initialState: workflow.initialState || {} 
+          workflow: {
+            id: workflow.id,
+            nodes: workflow.nodes,
+            inputs: workflow.initialState || {}
+          },
+          mode: 'auto'
         }),
       });
       
@@ -350,6 +353,12 @@ export default function WorkflowList({
                         <Link href={`/workflows/${workflow.id}/edit`}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/workflows/${workflow.id}/executions`}>
+                          <Clock className="mr-2 h-4 w-4" />
+                          View Executions
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDuplicate(workflow.id)}>

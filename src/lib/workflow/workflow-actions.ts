@@ -248,3 +248,64 @@ export async function updateWorkflow(
   revalidatePath(`/workflows/${id}`);
   return workflow;
 }
+
+export async function getWorkflowExecutions(workflowId?: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  // Build where condition
+  const whereCondition = workflowId
+    ? eq(workflowExecutions.workflowId, workflowId)
+    : undefined;
+
+  const executions = await db
+    .select({
+      id: workflowExecutions.id,
+      workflowId: workflowExecutions.workflowId,
+      workflowName: workflows.name,
+      status: workflowExecutions.status,
+      executionMode: workflowExecutions.executionMode,
+      startedAt: workflowExecutions.startedAt,
+      completedAt: workflowExecutions.completedAt,
+      error: workflowExecutions.error,
+      result: workflowExecutions.result,
+      metadata: workflowExecutions.metadata,
+    })
+    .from(workflowExecutions)
+    .leftJoin(workflows, eq(workflowExecutions.workflowId, workflows.id))
+    .where(whereCondition)
+    .orderBy(desc(workflowExecutions.startedAt))
+    .limit(100); // Limit to last 100 executions
+
+  return executions;
+}
+
+export async function getRecentWorkflowExecutions(limit: number = 10) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  const executions = await db
+    .select({
+      id: workflowExecutions.id,
+      workflowId: workflowExecutions.workflowId,
+      workflowName: workflows.name,
+      status: workflowExecutions.status,
+      executionMode: workflowExecutions.executionMode,
+      startedAt: workflowExecutions.startedAt,
+      completedAt: workflowExecutions.completedAt,
+      error: workflowExecutions.error,
+      result: workflowExecutions.result,
+      metadata: workflowExecutions.metadata,
+    })
+    .from(workflowExecutions)
+    .leftJoin(workflows, eq(workflowExecutions.workflowId, workflows.id))
+    .where(eq(workflows.userId, session.user.id))
+    .orderBy(desc(workflowExecutions.startedAt))
+    .limit(limit);
+
+  return executions;
+}

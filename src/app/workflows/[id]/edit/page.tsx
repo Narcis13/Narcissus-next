@@ -7,11 +7,12 @@ import { notFound } from "next/navigation";
 export default async function EditWorkflowPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   let workflow;
   try {
-    workflow = await getWorkflow(params.id);
+    workflow = await getWorkflow(id);
   } catch (error) {
     notFound();
   }

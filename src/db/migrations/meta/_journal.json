@@ -71,6 +71,20 @@
       "when": 1750759352507,
       "tag": "0009_stiff_blonde_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1750866744730,
+      "tag": "0010_mushy_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1750866762842,
+      "tag": "0011_yellow_living_mummy",
+      "breakpoints": true
     }
   ]
 }

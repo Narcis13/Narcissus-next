@@ -2,15 +2,15 @@ import { NextResponse } from 'next/server';
 import { ExecutionManager } from '@/lib/flow-engine/execution';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     executionId: string;
-  };
+  }>;
 }
 
 // GET /api/workflow/execution/[executionId] - Get execution status
 export async function GET(request: Request, { params }: RouteParams) {
   try {
-    const { executionId } = params;
+    const { executionId } = await params;
     
     const executionManager = ExecutionManager.getInstance();
     const result = await executionManager.getStatus(executionId);
@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 // DELETE /api/workflow/execution/[executionId] - Cancel execution
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
-    const { executionId } = params;
+    const { executionId } = await params;
     
     const executionManager = ExecutionManager.getInstance();
     await executionManager.cancel(executionId);

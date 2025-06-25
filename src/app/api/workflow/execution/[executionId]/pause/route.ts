@@ -2,15 +2,15 @@ import { NextResponse } from 'next/server';
 import { ExecutionManager } from '@/lib/flow-engine/execution';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     executionId: string;
-  };
+  }>;
 }
 
 // POST /api/workflow/execution/[executionId]/pause - Pause execution
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    const { executionId } = params;
+    const { executionId } = await params;
     
     const executionManager = ExecutionManager.getInstance();
     await executionManager.pause(executionId);

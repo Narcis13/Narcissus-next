@@ -1,4 +1,3 @@
-"use server";
 
 import { db } from "@/db";
 import { workflowExecutions, WorkflowExecutionStatus } from "@/db/schema/workflow-executions";

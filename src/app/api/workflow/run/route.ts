@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { ExecutionManager, ExecutionContext, ExecutionOptions } from '@/lib/flow-engine/execution';
 
 export async function POST(request: Request) {
+    let workflow: any;
     try {
-        const { workflow, mode, options } = await request.json();
+        const body = await request.json();
+        workflow = body.workflow;
+        const mode = body.mode;
+        const options = body.options;
         
         if (!workflow) {
             return NextResponse.json(
@@ -12,10 +16,18 @@ export async function POST(request: Request) {
             );
         }
 
+        // Ensure we have a valid workflow ID
+        if (!workflow.id) {
+            return NextResponse.json(
+                { message: 'Workflow ID is required.' },
+                { status: 400 }
+            );
+        }
+
         // Create execution context
         const context: ExecutionContext = {
             executionId: '', // Will be set by ExecutionManager
-            workflowId: workflow.id || 'temp-workflow',
+            workflowId: workflow.id,
             userId: 1, // Hardcoded for now
             startedAt: new Date(),
             input: workflow.inputs || {},
@@ -55,6 +67,15 @@ export async function POST(request: Request) {
         });
     } catch (error: any) {
         console.error('API Route Error:', error);
+        
+        // Check if it's a foreign key constraint error
+        if (error.message?.includes('workflow_id') || error.message?.includes('foreign key')) {
+            return NextResponse.json({ 
+                message: `Workflow with ID '${workflow?.id}' not found in database. Please ensure the workflow is saved before running.`,
+                error: 'WORKFLOW_NOT_FOUND'
+            }, { status: 400 });
+        }
+        
         return NextResponse.json({ message: error.message }, { status: 500 });
     }
 }
