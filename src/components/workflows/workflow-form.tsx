@@ -6,10 +6,19 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { createWorkflow, updateWorkflow } from "@/lib/workflow/workflow-actions";
-import { Save, AlertCircle, FileJson, Code2, FileText, Sparkles } from "lucide-react";
+import { Save, AlertCircle, FileJson, Code2, FileText, Sparkles, Info } from "lucide-react";
 import type { Workflow } from "@/db/schema";
 import dynamic from "next/dynamic";
 import { workflowTemplates } from "@/lib/workflow/templates";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 
 // Dynamically import Monaco to avoid SSR issues
 const MonacoJsonEditor = dynamic(
@@ -17,8 +26,8 @@ const MonacoJsonEditor = dynamic(
   { 
     ssr: false,
     loading: () => (
-      <div className="flex items-center justify-center h-96 bg-base-200 rounded-lg">
-        <span className="loading loading-spinner loading-lg"></span>
+      <div className="flex items-center justify-center h-96 bg-muted rounded-lg">
+        <Spinner size="lg" />
       </div>
     )
   }
@@ -130,137 +139,137 @@ export default function WorkflowForm({ workflow, initialTemplate }: WorkflowForm
     <div className="space-y-6">
       {/* Template Selection */}
       {!workflow && showTemplates && (
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
+        <Card>
+          <CardContent className="pt-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="card-title flex items-center gap-2">
+              <h2 className="text-2xl font-semibold flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
                 Start with a Template
               </h2>
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowTemplates(false)}
               >
                 Start from scratch
-              </button>
+              </Button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {workflowTemplates.map((template) => (
-                <div
+                <Card
                   key={template.id}
-                  className="card bg-base-200 hover:bg-base-300 cursor-pointer transition-colors"
+                  className="hover:bg-muted cursor-pointer transition-colors"
                   onClick={() => handleTemplateSelect(template)}
                 >
-                  <div className="card-body">
-                    <h3 className="card-title text-lg">
+                  <CardContent className="pt-6">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
                       <span className="text-2xl">{template.icon}</span>
                       {template.name}
                     </h3>
-                    <p className="text-sm text-base-content/70">
+                    <p className="text-sm text-muted-foreground mt-2">
                       {template.description}
                     </p>
-                    <div className="card-actions justify-end mt-2">
-                      <span className="badge badge-outline badge-sm">
+                    <div className="flex justify-end mt-2">
+                      <Badge variant="outline" className="text-xs">
                         {template.category}
-                      </span>
+                      </Badge>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Show templates button if hidden */}
       {!workflow && !showTemplates && (
         <div className="text-center">
-          <button
+          <Button
             type="button"
-            className="btn btn-ghost btn-sm"
+            variant="ghost"
+            size="sm"
             onClick={() => setShowTemplates(true)}
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-4 h-4 mr-2" />
             Use a template
-          </button>
+          </Button>
         </div>
       )}
 
       <form onSubmit={onSubmit} className="space-y-6">
       {error && (
-        <div className="alert alert-error">
-          <AlertCircle className="w-4 h-4" />
-          <span>{error}</span>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      <div className="card bg-base-100 shadow-xl">
-        <div className="card-body">
-          <h2 className="card-title">Workflow Details</h2>
-          
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Name</span>
-            </label>
-            <input
+      <Card>
+        <CardHeader>
+          <CardTitle>Workflow Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
               type="text"
               placeholder="My Awesome Workflow"
-              className={`input input-bordered ${errors.name ? "input-error" : ""}`}
+              className={errors.name ? "border-destructive" : ""}
               {...register("name")}
             />
             {errors.name && (
-              <label className="label">
-                <span className="label-text-alt text-error">{errors.name.message}</span>
-              </label>
+              <p className="text-sm text-destructive">{errors.name.message}</p>
             )}
           </div>
 
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Description</span>
-            </label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
               placeholder="Describe what this workflow does..."
-              className="textarea textarea-bordered w-full h-24"
+              className="h-24"
               {...register("description")}
             />
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="card bg-base-100 shadow-xl">
-        <div className="card-body">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="card-title flex items-center gap-2">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
               <FileJson className="w-5 h-5" />
               Workflow Configuration
-            </h2>
+            </CardTitle>
             <div className="flex items-center gap-4">
               <div className="text-sm">
                 {jsonError || jsonValidationErrors.length > 0 ? (
-                  <span className="text-error flex items-center gap-1">
+                  <span className="text-destructive flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
                     {jsonValidationErrors.length} validation {jsonValidationErrors.length === 1 ? 'error' : 'errors'}
                   </span>
                 ) : (
-                  <span className="text-success">Valid JSON</span>
+                  <span className="text-green-600">Valid JSON</span>
                 )}
               </div>
-              <label className="label cursor-pointer gap-2">
-                <span className="label-text">Code Editor</span>
-                <input
-                  type="checkbox"
-                  className="toggle toggle-primary"
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="code-editor" className="text-sm font-normal">Code Editor</Label>
+                <Checkbox
+                  id="code-editor"
                   checked={useCodeEditor}
-                  onChange={(e) => setUseCodeEditor(e.target.checked)}
+                  onCheckedChange={(checked) => setUseCodeEditor(checked as boolean)}
                 />
-              </label>
+              </div>
             </div>
           </div>
+        </CardHeader>
+        <CardContent>
 
-          <div className="form-control">
+          <div className="space-y-2">
             {useCodeEditor ? (
               <Controller
                 name="jsonData"
@@ -277,23 +286,21 @@ export default function WorkflowForm({ workflow, initialTemplate }: WorkflowForm
                 )}
               />
             ) : (
-              <textarea
+              <Textarea
                 placeholder="Enter workflow JSON..."
-                className={`textarea textarea-bordered font-mono text-sm h-96 ${
-                  errors.jsonData || jsonError ? "textarea-error" : ""
+                className={`font-mono text-sm h-96 ${
+                  errors.jsonData || jsonError ? "border-destructive" : ""
                 }`}
                 {...register("jsonData")}
               />
             )}
             {errors.jsonData && (
-              <label className="label">
-                <span className="label-text-alt text-error">{errors.jsonData.message}</span>
-              </label>
+              <p className="text-sm text-destructive">{errors.jsonData.message}</p>
             )}
             {jsonValidationErrors.length > 0 && useCodeEditor && (
               <div className="mt-2 max-h-32 overflow-y-auto">
                 {jsonValidationErrors.slice(0, 3).map((error, index) => (
-                  <div key={index} className="text-sm text-error">
+                  <div key={index} className="text-sm text-destructive">
                     Line {error.startLineNumber}: {error.message}
                   </div>
                 ))}
@@ -301,36 +308,35 @@ export default function WorkflowForm({ workflow, initialTemplate }: WorkflowForm
             )}
           </div>
 
-          <div className="alert alert-info mt-4">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <div>
-              <div className="text-sm">
-                Define your workflow using JSON format. Include nodes array for workflow steps and connections array for data flow.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          <Alert className="mt-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Define your workflow using JSON format. Include nodes array for workflow steps and connections array for data flow.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
 
       <div className="flex justify-end gap-4">
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost"
+          variant="ghost"
           onClick={() => router.push("/workflows")}
           disabled={isPending}
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          className={`btn btn-primary ${isPending ? "loading" : ""}`}
           disabled={isPending}
         >
-          {!isPending && <Save className="w-4 h-4" />}
+          {isPending ? (
+            <Spinner size="sm" className="mr-2" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
           {workflow ? "Update Workflow" : "Create Workflow"}
-        </button>
+        </Button>
       </div>
       </form>
     </div>

@@ -6,6 +6,23 @@ import Link from "next/link";
 import AuthSessionProvider from "@/components/auth/session-provider";
 import { auth } from "@/auth";
 import { signOut } from "@/auth";
+import { Button } from "@/components/ui/button";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Menu } from "lucide-react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,73 +47,130 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="en" data-theme="light">
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthSessionProvider>
-          <nav className="navbar bg-base-200">
-            <div className="navbar-start">
-              <div className="dropdown">
-                <label tabIndex={0} className="btn btn-ghost lg:hidden">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" />
-                  </svg>
-                </label>
-                <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-                  <li><Link href="/">Home</Link></li>
+          <nav className="border-b">
+            <div className="flex h-16 items-center px-4 container mx-auto">
+              <div className="flex items-center space-x-4 lg:space-x-6">
+                <Link href="/" className="text-xl font-semibold">
+                  FlowForge AI
+                </Link>
+                
+                {/* Mobile menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild className="lg:hidden">
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-52">
+                    <DropdownMenuItem asChild>
+                      <Link href="/">Home</Link>
+                    </DropdownMenuItem>
+                    {session && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/dashboard">Dashboard</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/workflows">Workflows</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/posts">Posts</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/credentials">Credentials</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/profile">Profile</Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Desktop navigation */}
+              <NavigationMenu className="hidden lg:flex mx-6">
+                <NavigationMenuList>
+                  <NavigationMenuItem>
+                    <Link href="/" legacyBehavior passHref>
+                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        Home
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
                   {session && (
                     <>
-                      <li><Link href="/dashboard">Dashboard</Link></li>
-                      <li><Link href="/workflows">Workflows</Link></li>
-                      <li><Link href="/posts">Posts</Link></li>
-                      <li><Link href="/credentials">Credentials</Link></li>
-                      <li><Link href="/profile">Profile</Link></li>
+                      <NavigationMenuItem>
+                        <Link href="/dashboard" legacyBehavior passHref>
+                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                            Dashboard
+                          </NavigationMenuLink>
+                        </Link>
+                      </NavigationMenuItem>
+                      <NavigationMenuItem>
+                        <Link href="/workflows" legacyBehavior passHref>
+                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                            Workflows
+                          </NavigationMenuLink>
+                        </Link>
+                      </NavigationMenuItem>
+                      <NavigationMenuItem>
+                        <Link href="/posts" legacyBehavior passHref>
+                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                            Posts
+                          </NavigationMenuLink>
+                        </Link>
+                      </NavigationMenuItem>
+                      <NavigationMenuItem>
+                        <Link href="/credentials" legacyBehavior passHref>
+                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                            Credentials
+                          </NavigationMenuLink>
+                        </Link>
+                      </NavigationMenuItem>
+                      <NavigationMenuItem>
+                        <Link href="/profile" legacyBehavior passHref>
+                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                            Profile
+                          </NavigationMenuLink>
+                        </Link>
+                      </NavigationMenuItem>
                     </>
                   )}
-                </ul>
-              </div>
-              <Link href="/" className="btn btn-ghost text-xl">FlowForge AI</Link>
-            </div>
-            <div className="navbar-center hidden lg:flex">
-              <ul className="menu menu-horizontal px-1">
-                <li><Link href="/">Home</Link></li>
-                {session && (
+                </NavigationMenuList>
+              </NavigationMenu>
+
+              <div className="ml-auto flex items-center space-x-4">
+                {session ? (
                   <>
-                    <li><Link href="/dashboard">Dashboard</Link></li>
-                    <li><Link href="/workflows">Workflows</Link></li>
-                    <li><Link href="/posts">Posts</Link></li>
-                    <li><Link href="/credentials">Credentials</Link></li>
-                    <li><Link href="/profile">Profile</Link></li>
+                    <span className="text-sm text-muted-foreground">{session.user?.email}</span>
+                    <form
+                      action={async () => {
+                        "use server";
+                        await signOut();
+                      }}
+                    >
+                      <Button type="submit" variant="destructive" size="sm">
+                        Sign Out
+                      </Button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <Button asChild size="sm">
+                      <Link href="/login">Login</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/signup">Sign Up</Link>
+                    </Button>
                   </>
                 )}
-              </ul>
-            </div>
-            <div className="navbar-end">
-              {session ? (
-                <>
-                  <span className="text-sm mr-4">{session.user?.email}</span>
-                  <form
-                    action={async () => {
-                      "use server";
-                      await signOut();
-                    }}
-                  >
-                    <button type="submit" className="btn btn-error btn-sm">
-                      Sign Out
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <>
-                  <Link href="/login" className="btn btn-primary btn-sm mr-2">
-                    Login
-                  </Link>
-                  <Link href="/signup" className="btn btn-success btn-sm">
-                    Sign Up
-                  </Link>
-                </>
-              )}
+              </div>
             </div>
           </nav>
           {children}

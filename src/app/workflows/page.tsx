@@ -3,6 +3,8 @@ import { getWorkflows } from "@/lib/workflow/workflow-actions";
 import WorkflowList from "@/components/workflows/workflow-list";
 import { Plus, FileText } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 export default async function WorkflowsPage({
   searchParams,
@@ -20,26 +22,30 @@ export default async function WorkflowsPage({
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">Workflows</h1>
-          <p className="text-base-content/70 mt-2">
+          <p className="text-muted-foreground mt-2">
             Manage your automation workflows
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/workflows/templates" className="btn btn-outline">
-            <FileText className="w-4 h-4" />
-            Browse Templates
-          </Link>
-          <Link href="/workflows/new" className="btn btn-primary">
-            <Plus className="w-4 h-4" />
-            New Workflow
-          </Link>
+          <Button variant="outline" asChild>
+            <Link href="/workflows/templates">
+              <FileText className="w-4 h-4 mr-2" />
+              Browse Templates
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/workflows/new">
+              <Plus className="w-4 h-4 mr-2" />
+              New Workflow
+            </Link>
+          </Button>
         </div>
       </div>
 
       <Suspense
         fallback={
           <div className="flex justify-center items-center h-64">
-            <span className="loading loading-spinner loading-lg"></span>
+            <Spinner size="lg" />
           </div>
         }
       >
