@@ -129,6 +129,37 @@ export default function WorkflowList({
     });
   };
 
+  const handleRun = async (id: string) => {
+    try {
+      // Get the workflow data first
+      const response = await fetch(`/api/workflow/${id}`);
+      const workflow = await response.json();
+      
+      // Run the workflow using the API
+      const runResponse = await fetch('/api/workflow/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          workflowId: id,
+          nodes: workflow.nodes, 
+          initialState: workflow.initialState || {} 
+        }),
+      });
+      
+      const result = await runResponse.json();
+      if (runResponse.ok) {
+        // Redirect to execution detail page or show success
+        router.push(`/workflows/${id}?execution=${result.executionId}`);
+      } else {
+        console.error('Failed to run workflow:', result.error);
+        alert(`Failed to run workflow: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Failed to run workflow:", error);
+      alert('Failed to run workflow. Please try again.');
+    }
+  };
+
   const SortIcon = ({ field }: { field: string }) => {
     if (sortBy !== field) return null;
     return sortOrder === "desc" ? 
@@ -190,7 +221,7 @@ export default function WorkflowList({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto relative">
+      <div className="overflow-x-auto overflow-y-visible relative">
         <table className="table table-zebra">
           <thead>
             <tr>
@@ -293,19 +324,19 @@ export default function WorkflowList({
                   </span>
                 </td>
                 <td>
-                  <div className={`dropdown dropdown-end ${index >= workflows.length - 2 ? 'dropdown-top' : 'dropdown-bottom'}`}>
+                  <div className={`dropdown dropdown-end ${workflows.length <= 2 || index >= workflows.length - 2 ? 'dropdown-top' : ''}`}>
                     <label tabIndex={0} className="btn btn-ghost btn-sm btn-square">
                       <MoreVertical className="w-4 h-4" />
                     </label>
                     <ul
                       tabIndex={0}
-                      className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-[100] absolute"
+                      className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-[100] mt-1"
                     >
                       <li>
-                        <Link href={`/workflows/${workflow.id}/run`}>
+                        <button onClick={() => handleRun(workflow.id)}>
                           <Play className="w-4 h-4" />
                           Run
-                        </Link>
+                        </button>
                       </li>
                       <li>
                         <Link href={`/workflows/${workflow.id}/edit`}>

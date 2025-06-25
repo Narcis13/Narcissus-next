@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { workflows, workflowExecutions } from "@/db/schema";
-import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, inArray } from "drizzle-orm";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
@@ -126,11 +126,16 @@ export async function deleteWorkflows(ids: string[]) {
     throw new Error("Unauthorized");
   }
 
+  // Only delete if there are IDs to delete
+  if (ids.length === 0) {
+    return;
+  }
+
   await db
     .delete(workflows)
     .where(
       and(
-        sql`${workflows.id} IN ${sql.raw(`(${ids.map(() => "?").join(", ")})`, ids)}`,
+        inArray(workflows.id, ids),
         eq(workflows.userId, session.user.id)
       )
     );

@@ -128,7 +128,7 @@ To provide a lightweight, AI-friendly workflow automation platform that makes co
 
 ### Frontend
 - **Framework**: Next.js 15 with App Router
-- **UI**: React 19 with TypeScript + Daisy UI components
+- **UI**: React 19 with TypeScript + Shadcn UI components
 - **Styling**: Tailwind CSS v4
 - **State**: Zustand (simple)
 - **Editor**: Monaco or CodeMirror for JSON

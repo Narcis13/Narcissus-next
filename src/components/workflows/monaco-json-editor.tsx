@@ -1,8 +1,16 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import Editor, { Monaco } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
+
+interface NodeSuggestion {
+  label: string;
+  insertText: string;
+  detail: string;
+  nodeId: string;
+  sortOrder: number;
+}
 
 interface MonacoJsonEditorProps {
   value: string;
@@ -21,9 +29,70 @@ export default function MonacoJsonEditor({
 }: MonacoJsonEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
+  const [nodeSuggestions, setNodeSuggestions] = useState<NodeSuggestion[]>([]);
 
   const handleEditorWillMount = (monaco: Monaco) => {
     monacoRef.current = monaco;
+
+    // Define recursive node schema
+    const nodeDefinition: any = {
+      definitions: {
+        node: {
+          oneOf: [
+            // String node: "node.id" or "Human Readable Name"
+            {
+              type: "string",
+              description: "Node ID (e.g. 'http.request.get') or human-readable name (e.g. 'Send Email')"
+            },
+            // Parameterized node: { "node.id": { params } } or { "Human Name": { params } }
+            {
+              type: "object",
+              description: "Parameterized node call with parameters",
+              minProperties: 1,
+              maxProperties: 1,
+              patternProperties: {
+                "^.+$": {
+                  type: "object",
+                  description: "Node parameters",
+                  additionalProperties: true
+                }
+              },
+              additionalProperties: false
+            },
+            // Sub-flow: [node1, node2, ...] (single array)
+            {
+              type: "array",
+              description: "Sub-flow (single array of nodes executed in sequence)",
+              minItems: 1,
+              items: { "$ref": "#/definitions/node" }
+            },
+            // Loop: [[controller, action1, action2]] (double array)
+            {
+              type: "array",
+              description: "Loop flow (double array: [[controller, ...actions]])",
+              minItems: 1,
+              maxItems: 1,
+              items: {
+                type: "array",
+                description: "Loop nodes (first is controller, rest are actions)",
+                minItems: 1,
+                items: { "$ref": "#/definitions/node" }
+              }
+            },
+            // Branch: { "edgeName": node, ... } (NOT a parameterized node)
+            {
+              type: "object",
+              description: "Branch node (routes based on previous node's edges)",
+              minProperties: 2,  // Distinguish from parameterized nodes which have exactly 1 property
+              patternProperties: {
+                "^.+$": { "$ref": "#/definitions/node" }
+              },
+              additionalProperties: false
+            }
+          ]
+        }
+      }
+    };
 
     // Configure JSON language features
     monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -33,6 +102,7 @@ export default function MonacoJsonEditor({
           uri: "http://myserver/workflow-schema.json",
           fileMatch: ["*"],
           schema: {
+            ...nodeDefinition,
             type: "object",
             required: ["name", "nodes"],
             properties: {
@@ -49,59 +119,7 @@ export default function MonacoJsonEditor({
                 type: "array",
                 description: "Array of workflow nodes",
                 minItems: 1,
-                items: {
-                  oneOf: [
-                    {
-                      type: "string",
-                      description: "Node ID reference (e.g. 'http.request.get')",
-                      pattern: "^[a-zA-Z_][a-zA-Z0-9._]*$"
-                    },
-                    {
-                      type: "object",
-                      description: "Parameterized node call",
-                      minProperties: 1,
-                      maxProperties: 1,
-                      patternProperties: {
-                        "^[a-zA-Z_][a-zA-Z0-9._]*$": {
-                          type: "object",
-                          description: "Node parameters",
-                          additionalProperties: true
-                        }
-                      },
-                      additionalProperties: false
-                    },
-                    {
-                      type: "array",
-                      description: "Sub-flow (array of nodes)",
-                      items: {
-                        "$ref": "#"
-                      },
-                      minItems: 1
-                    },
-                    {
-                      type: "array",
-                      description: "Loop flow (double array with controller and actions)",
-                      minItems: 1,
-                      maxItems: 1,
-                      items: {
-                        type: "array",
-                        description: "Loop nodes (first is controller, rest are actions)",
-                        minItems: 1
-                      }
-                    },
-                    {
-                      type: "object",
-                      description: "Branch node (executes based on previous node's edges)",
-                      minProperties: 1,
-                      patternProperties: {
-                        "^[a-zA-Z_][a-zA-Z0-9_]*$": {
-                          "$ref": "#"
-                        }
-                      },
-                      additionalProperties: false
-                    }
-                  ]
-                },
+                items: { "$ref": "#/definitions/node" }
               },
               initialState: {
                 type: "object",
@@ -114,64 +132,6 @@ export default function MonacoJsonEditor({
       ],
     });
 
-    // Set up auto-completion for common node IDs
-    monaco.languages.registerCompletionItemProvider("json", {
-      provideCompletionItems: (model, position) => {
-        const textUntilPosition = model.getValueInRange({
-          startLineNumber: 1,
-          startColumn: 1,
-          endLineNumber: position.lineNumber,
-          endColumn: position.column,
-        });
-
-        // Check if we're in a nodes array context or typing a string
-        const inNodesContext = /\"nodes\"\s*:\s*\[[^]*$/.test(textUntilPosition);
-        const typingString = /\"[^"]*$/.test(textUntilPosition) && inNodesContext;
-
-        if (typingString) {
-          // Common node IDs from the FlowManager system
-          const nodeIds = [
-            // Logic nodes
-            { label: "logic.condition.if", insertText: '"logic.condition.if"', detail: "Conditional branching" },
-            { label: "logic.control.delay", insertText: '"logic.control.delay"', detail: "Delay execution" },
-            { label: "logic.control.loop", insertText: '"logic.control.loop"', detail: "Loop controller" },
-            // Data nodes
-            { label: "data.transform.mapper", insertText: '"data.transform.mapper"', detail: "Transform data" },
-            { label: "data.combine.merge", insertText: '"data.combine.merge"', detail: "Merge data sources" },
-            // HTTP nodes
-            { label: "http.request.get", insertText: '"http.request.get"', detail: "HTTP GET request" },
-            { label: "http.request.post", insertText: '"http.request.post"', detail: "HTTP POST request" },
-            // AI nodes
-            { label: "ai.openai.completion", insertText: '"ai.openai.completion"', detail: "OpenAI completion" },
-            { label: "ai.anthropic.completion", insertText: '"ai.anthropic.completion"', detail: "Anthropic Claude" },
-            // Communication nodes
-            { label: "communication.email.send", insertText: '"communication.email.send"', detail: "Send email" },
-            { label: "communication.webhook.send", insertText: '"communication.webhook.send"', detail: "Send webhook" },
-            // Database nodes
-            { label: "database.query.select", insertText: '"database.query.select"', detail: "Database query" },
-            { label: "database.query.insert", insertText: '"database.query.insert"', detail: "Database insert" },
-          ];
-
-          return {
-            suggestions: nodeIds.map((node, index) => ({
-              label: node.label,
-              kind: monaco.languages.CompletionItemKind.Value,
-              insertText: node.insertText,
-              detail: node.detail,
-              sortText: String(index).padStart(3, "0"),
-              range: {
-                startLineNumber: position.lineNumber,
-                startColumn: position.column,
-                endLineNumber: position.lineNumber,
-                endColumn: position.column,
-              },
-            })),
-          };
-        }
-
-        return { suggestions: [] };
-      },
-    });
   };
 
   const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor) => {
@@ -198,6 +158,76 @@ export default function MonacoJsonEditor({
       onValidate(markers.length === 0, markers);
     }
   };
+
+  // Fetch node suggestions from the API
+  useEffect(() => {
+    fetch('/api/workflow/nodes/suggestions')
+      .then(res => res.json())
+      .then(data => {
+        if (data.suggestions) {
+          setNodeSuggestions(data.suggestions);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch node suggestions:', err);
+      });
+  }, []);
+
+  // Register completion provider when suggestions are loaded
+  useEffect(() => {
+    if (monacoRef.current && nodeSuggestions.length > 0) {
+      const disposable = monacoRef.current.languages.registerCompletionItemProvider("json", {
+        provideCompletionItems: (model, position) => {
+          const textUntilPosition = model.getValueInRange({
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column,
+          });
+
+          // Check if we're in a nodes array context or typing a string
+          const inNodesContext = /\"nodes\"\s*:\s*\[[^]*$/.test(textUntilPosition);
+          const typingString = /\"[^"]*$/.test(textUntilPosition) && inNodesContext;
+
+          if (typingString) {
+            // Get the current word being typed and its starting position
+            const lineText = model.getLineContent(position.lineNumber);
+            const wordMatch = lineText.substring(0, position.column - 1).match(/\"([^"]*)$/);
+            const currentWord = wordMatch ? wordMatch[1] : '';
+            const wordStartColumn = wordMatch ? position.column - currentWord.length : position.column;
+            
+            const filteredSuggestions = nodeSuggestions
+              .filter(suggestion => 
+                suggestion.label.toLowerCase().includes(currentWord.toLowerCase())
+              )
+              .slice(0, 50); // Limit to 50 suggestions for performance
+
+            return {
+              suggestions: filteredSuggestions.map((node, index) => ({
+                label: node.label,
+                kind: monacoRef.current!.languages.CompletionItemKind.Value,
+                insertText: node.label, // Just the label, not quoted
+                detail: node.detail,
+                sortText: String(node.sortOrder).padStart(5, "0") + String(index).padStart(3, "0"),
+                range: {
+                  startLineNumber: position.lineNumber,
+                  startColumn: wordStartColumn,
+                  endLineNumber: position.lineNumber,
+                  endColumn: position.column,
+                },
+              })),
+            };
+          }
+
+          return { suggestions: [] };
+        },
+      });
+
+      return () => {
+        disposable.dispose();
+      };
+    }
+  }, [nodeSuggestions]);
 
   useEffect(() => {
     // Format document on first load

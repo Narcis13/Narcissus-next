@@ -13,6 +13,13 @@ NextProject is a Next.js 15.3.1 application with React 19, using TypeScript with
 4. Then, begin working on the todo items, marking them as complete as you go.
 5. Finally, add a review section to the todo.md file with a summary of the changes you made and any other relevant information. 
 
+# VERY IMPORTANT
+
+  At the very start of every coding sessiom read the following docs:
+  - A succint presentation of the engine that power the agentic workflow management system located at: /src/lib/flow-engine/FLOWMANAGER_SYNTHESIS.md
+  - PRD file located at: /PRD-lite.md
+  - tasks/todo.md to evaluate the phase of the development we ar in
+  
 ## Essential Commands
 
 ```bash
@@ -44,7 +51,7 @@ npm run generate-indexes  # Auto-runs before dev/build
 ## Architecture & Structure
 
 ### Technology Stack
-- **Frontend**: Next.js 15.3.1 (App Router), React 19, TypeScript
+- **Frontend**: Next.js 15.3.1 (App Router), React 19, TypeScript, Shadcn UI components
 - **Styling**: Tailwind CSS v4, custom configuration with theme support
 - **Database**: PostgreSQL with Drizzle ORM
 - **Security**: Custom AES-256-GCM encryption for credentials
