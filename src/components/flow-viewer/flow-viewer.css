@@ -1,0 +1,136 @@
+/* Custom styles for React Flow with beautiful animations */
+
+/* Smooth animations for all transitions */
+.react-flow__node {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.react-flow__node:hover {
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.1));
+}
+
+/* Animated edges */
+.react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Custom handle styles */
+.react-flow__handle {
+  transition: all 0.2s ease;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.2);
+}
+
+/* Minimap styling */
+.react-flow__minimap {
+  transition: opacity 0.3s ease;
+}
+
+.react-flow__minimap:hover {
+  opacity: 1 !important;
+}
+
+/* Controls styling */
+.react-flow__controls {
+  transition: all 0.3s ease;
+}
+
+.react-flow__controls-button {
+  transition: all 0.2s ease;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(124, 58, 237, 0.1) !important;
+  color: rgb(124, 58, 237) !important;
+}
+
+/* Background pattern animation */
+.react-flow__background-pattern {
+  animation: backgroundMove 20s linear infinite;
+}
+
+@keyframes backgroundMove {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(16px, 16px);
+  }
+}
+
+/* Node status animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Edge labels */
+.react-flow__edge-text {
+  fill: rgb(124, 58, 237);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.react-flow__edge-textbg {
+  fill: white;
+}
+
+/* Selection box */
+.react-flow__selection {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgb(124, 58, 237);
+}
+
+/* Node drag preview */
+.react-flow__node.dragging {
+  cursor: grabbing;
+  opacity: 0.5;
+}
+
+/* Smooth zoom */
+.react-flow__viewport {
+  transition: transform 0.2s ease-out;
+}
+
+/* Attribution hiding (for pro version) */
+.react-flow__attribution {
+  display: none;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .react-flow__edge-path {
+    filter: drop-shadow(0 0 3px rgba(124, 58, 237, 0.5));
+  }
+  
+  .react-flow__background-pattern {
+    opacity: 0.3;
+  }
+}

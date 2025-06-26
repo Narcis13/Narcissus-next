@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getWorkflows } from "@/lib/workflow/workflow-actions";
 import WorkflowList from "@/components/workflows/workflow-list";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, Eye } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,6 +27,12 @@ export default async function WorkflowsPage({
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/workflows/visualize">
+              <Eye className="w-4 h-4 mr-2" />
+              Visualize
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href="/workflows/templates">
               <FileText className="w-4 h-4 mr-2" />
