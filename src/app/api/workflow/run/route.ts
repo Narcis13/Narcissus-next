@@ -8,6 +8,7 @@ export async function POST(request: Request) {
         workflow = body.workflow;
         const mode = body.mode;
         const options = body.options;
+        const executionMode = body.executionMode; // 'immediate' or 'queued'
         
         if (!workflow) {
             return NextResponse.json(
@@ -53,6 +54,13 @@ export async function POST(request: Request) {
         let complexity;
         if (executionOptions.mode === 'auto') {
             complexity = executionManager.getWorkflowComplexity(workflow);
+        }
+
+        // Override execution mode if specified
+        if (executionMode === 'queued') {
+            executionOptions.mode = 'queued';
+        } else if (executionMode === 'immediate') {
+            executionOptions.mode = 'immediate';
         }
 
         // Execute workflow

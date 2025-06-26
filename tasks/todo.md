@@ -162,21 +162,21 @@
   - [ ] Export as image (deferred)
   - [ ] Execution path highlighting (deferred)
 
-### Execution Monitoring
-- [ ] Create execution history page
-  - [ ] List of all executions
-  - [ ] Status badges (success/running/failed)
-  - [ ] Execution duration
-  - [ ] Filter by workflow/status/date
-- [ ] Build execution detail view
-  - [ ] Step-by-step execution log
-  - [ ] Node input/output data
-  - [ ] Error details and stack traces
-  - [ ] Execution timeline
-- [ ] Add real-time updates
-  - [ ] WebSocket connection for live logs
-  - [ ] Progress indicators
-  - [ ] Live status updates
+### Execution Monitoring ✓ (Completed)
+- [x] Create execution history page ✓ (Completed)
+  - [x] List of all executions
+  - [x] Status badges (success/running/failed)
+  - [x] Execution duration
+  - [x] Filter by workflow/status/date
+- [x] Build execution detail view ✓ (Completed)
+  - [x] Step-by-step execution log
+  - [x] Node input/output data
+  - [x] Error details and stack traces
+  - [x] Execution timeline
+- [x] Add real-time updates ✓ (Completed)
+  - [x] WebSocket connection for live logs (SSE implemented)
+  - [x] Progress indicators
+  - [x] Live status updates
 
 ## Phase 4: AI Integration & API (Week 4)
 

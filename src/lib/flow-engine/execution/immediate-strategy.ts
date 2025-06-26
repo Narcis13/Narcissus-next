@@ -38,24 +38,46 @@ export class ImmediateExecutionStrategy extends BaseExecutionStrategy {
       // Track execution steps
       const steps: ExecutionStep[] = [];
       
+      console.log('[ImmediateStrategy] Starting execution for workflow:', workflow.id);
+      console.log('[ImmediateStrategy] Workflow nodes:', workflow.nodes);
+      
       // Create FlowManager with step tracking
       const fm = this.createFlowManager(workflow, context, async (step) => {
+        console.log('[ImmediateStrategy] Saving execution step:', step);
         steps.push(step);
-        await ExecutionPersistence.saveExecutionStep(executionId, step);
+        try {
+          await ExecutionPersistence.saveExecutionStep(executionId, step);
+          console.log('[ImmediateStrategy] Step saved successfully');
+        } catch (error) {
+          console.error('[ImmediateStrategy] Failed to save step:', error);
+        }
       });
 
       // Store active execution
       this.activeExecutions.set(executionId, { fm, workflow, context });
 
-      // Execute synchronously
+      // Execute synchronously - this will get steps from FlowManager
       const result = await this.handleFlowExecution(fm, executionId);
-      result.steps = steps;
+      
+      // Log the result for debugging
+      console.log('[ImmediateStrategy] Execution completed. Steps count:', result.steps?.length || 0);
 
       // Clear timeout if exists
       const timeoutId = this.executionTimeouts.get(executionId);
       if (timeoutId) {
         clearTimeout(timeoutId);
         this.executionTimeouts.delete(executionId);
+      }
+
+      // Clean up all event listeners
+      if ((fm as any)._eventHandlers) {
+        const { step, pause, resume, flowHub } = (fm as any)._eventHandlers;
+        if (flowHub && typeof flowHub.off === 'function') {
+          flowHub.off("flowManagerStep", step);
+          flowHub.off("flowPaused", pause);
+          flowHub.off("flowResumed", resume);
+          console.log('[ImmediateStrategy] Cleaned up all FlowHub listeners');
+        }
       }
 
       // Clean up
@@ -68,6 +90,17 @@ export class ImmediateExecutionStrategy extends BaseExecutionStrategy {
       if (timeoutId) {
         clearTimeout(timeoutId);
         this.executionTimeouts.delete(executionId);
+      }
+
+      // Clean up all event listeners
+      if ((fm as any)._eventHandlers) {
+        const { step, pause, resume, flowHub } = (fm as any)._eventHandlers;
+        if (flowHub && typeof flowHub.off === 'function') {
+          flowHub.off("flowManagerStep", step);
+          flowHub.off("flowPaused", pause);
+          flowHub.off("flowResumed", resume);
+          console.log('[ImmediateStrategy] Cleaned up all FlowHub listeners');
+        }
       }
 
       // Clean up

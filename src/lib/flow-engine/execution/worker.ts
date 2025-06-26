@@ -5,6 +5,10 @@ import { ExecutionPersistence } from "./persistence";
 import { ExecutionStep } from "./types";
 import { FlowExecutionJob } from "@/lib/redis/queues";
 import redisConnection from "@/lib/redis/config";
+import Redis from "ioredis";
+
+// Create a separate Redis connection for pub/sub
+const pubClient = redisConnection ? new Redis(process.env.REDIS_URL!) : null;
 
 export function createFlowExecutionWorker() {
   const worker = new Worker<FlowExecutionJob>(
@@ -36,6 +40,17 @@ export function createFlowExecutionWorker() {
         const steps: ExecutionStep[] = [];
         let stepCount = 0;
 
+        // Emit flow start event via Redis pub/sub
+        if (pubClient) {
+          await pubClient.publish('flowhub:events', JSON.stringify({
+            type: 'flowStart',
+            payload: {
+              flowInstanceId: executionId,
+              timestamp: new Date().toISOString(),
+            }
+          }));
+        }
+
         // Listen to flow events
         const cleanup = setupFlowEventListeners(executionId, async (step) => {
           steps.push(step);
@@ -52,6 +67,23 @@ export function createFlowExecutionWorker() {
 
           // Save step to database
           await ExecutionPersistence.saveExecutionStep(executionId, step);
+          
+          // Emit step event via Redis pub/sub
+          if (pubClient) {
+            await pubClient.publish('flowhub:events', JSON.stringify({
+              type: 'flowManagerStep',
+              payload: {
+                flowInstanceId: executionId,
+                nodeId: step.nodeId,
+                timestamp: new Date().toISOString(),
+                stepData: {
+                  node: { id: step.nodeId },
+                  input: step.input,
+                  output: step.output,
+                }
+              }
+            }));
+          }
         });
 
         try {
@@ -59,8 +91,51 @@ export function createFlowExecutionWorker() {
           await job.updateProgress({ status: "executing" });
           const output = await fm.run();
 
-          // Mark as completed
-          await ExecutionPersistence.markExecutionAsCompleted(executionId, output);
+          // Get steps from FlowManager if available
+          if (fm.getSteps && typeof fm.getSteps === 'function') {
+            const fmSteps = fm.getSteps();
+            steps.length = 0; // Clear array
+            fmSteps.forEach((step: any, index: number) => {
+              let nodeId = `step-${index}`;
+              if (typeof step.node === 'string') {
+                nodeId = step.node;
+              } else if (step.node?.id) {
+                nodeId = step.node.id;
+              } else if (step.node?.type) {
+                nodeId = step.node.type;
+              }
+              
+              steps.push({
+                nodeId,
+                status: "completed" as const,
+                startedAt: new Date(),
+                completedAt: new Date(),
+                input: step.input,
+                output: step.output,
+              });
+            });
+          }
+
+          // Save execution result with steps
+          await ExecutionPersistence.saveExecutionResult({
+            executionId,
+            status: "completed",
+            output,
+            completedAt: new Date(),
+            steps,
+          });
+
+          // Emit flow end event via Redis pub/sub
+          if (pubClient) {
+            await pubClient.publish('flowhub:events', JSON.stringify({
+              type: 'flowEnd',
+              payload: {
+                flowInstanceId: executionId,
+                timestamp: new Date().toISOString(),
+                output,
+              }
+            }));
+          }
 
           // Clean up event listeners
           cleanup();
@@ -114,20 +189,33 @@ export function createFlowExecutionWorker() {
 }
 
 function convertWorkflowToFlowNodes(workflow: any): any[] {
-  const nodes: any[] = [];
-  
-  for (const node of workflow.nodes) {
-    const flowNode = {
-      id: node.id,
-      type: node.nodeId,
-      inputs: node.inputs,
-      config: node.config,
-    };
+  // If workflow already has FlowManager-compatible nodes array, use it directly
+  if (workflow.nodes && Array.isArray(workflow.nodes)) {
+    // Check if it's already in FlowManager format
+    const firstNode = workflow.nodes[0];
+    if (typeof firstNode === 'string' || 
+        (typeof firstNode === 'object' && !firstNode.id && !firstNode.nodeId) ||
+        Array.isArray(firstNode)) {
+      // Already in FlowManager format
+      return workflow.nodes;
+    }
     
-    nodes.push(flowNode);
+    // Otherwise, try to convert from old format
+    const nodes: any[] = [];
+    for (const node of workflow.nodes) {
+      if (node.nodeId && node.inputs) {
+        // Convert old format to parameterized node
+        nodes.push({ [node.nodeId]: node.inputs });
+      } else if (node.nodeId) {
+        // Simple node reference
+        nodes.push(node.nodeId);
+      }
+    }
+    return nodes;
   }
-
-  return nodes;
+  
+  // Fallback to empty array
+  return [];
 }
 
 function setupFlowEventListeners(
@@ -137,23 +225,66 @@ function setupFlowEventListeners(
   const handleStep = async (data: any) => {
     if (data.flowInstanceId !== executionId) return;
 
+    const stepData = data.stepData || {};
+    const nodeInfo = stepData.node || {};
+    
+    // Extract node ID from various possible structures
+    let nodeId = "unknown";
+    if (typeof nodeInfo === 'string') {
+      nodeId = nodeInfo;
+    } else if (nodeInfo.id) {
+      nodeId = nodeInfo.id;
+    } else if (nodeInfo.type) {
+      nodeId = nodeInfo.type;
+    } else if (nodeInfo.implementation) {
+      nodeId = nodeInfo.implementation;
+    }
+
     const step: ExecutionStep = {
-      nodeId: data.nodeId || "unknown",
+      nodeId: nodeId,
       status: "completed",
-      startedAt: new Date(data.timestamp),
+      startedAt: new Date(),
       completedAt: new Date(),
-      input: data.input,
-      output: data.output,
+      input: stepData.input || data.currentState,
+      output: stepData.output,
     };
 
     await onStep(step);
   };
 
+  const handlePause = async (data: any) => {
+    if (data.flowInstanceId !== executionId) return;
+    
+    // Emit pause event via Redis pub/sub
+    if (pubClient) {
+      await pubClient.publish('flowhub:events', JSON.stringify({
+        type: 'flowPaused',
+        payload: data
+      }));
+    }
+  };
+  
+  const handleResume = async (data: any) => {
+    if (data.flowInstanceId !== executionId) return;
+    
+    // Emit resume event via Redis pub/sub
+    if (pubClient) {
+      await pubClient.publish('flowhub:events', JSON.stringify({
+        type: 'flowResumed',
+        payload: data
+      }));
+    }
+  };
+
   flowHub.on("flowManagerStep", handleStep);
+  flowHub.on("flowPaused", handlePause);
+  flowHub.on("flowResumed", handleResume);
 
   // Return cleanup function
   return () => {
     flowHub.off("flowManagerStep", handleStep);
+    flowHub.off("flowPaused", handlePause);
+    flowHub.off("flowResumed", handleResume);
   };
 }
 
