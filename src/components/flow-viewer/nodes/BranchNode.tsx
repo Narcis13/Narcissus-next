@@ -59,7 +59,15 @@ export default function BranchNode({ data, selected }: NodeProps<BranchNodeData>
                   key={index}
                   className="flex items-center gap-2 text-xs bg-white/10 backdrop-blur-sm px-2 py-1 rounded"
                 >
-                  <div className="w-2 h-2 rounded-full bg-white/60" />
+                  <div 
+                    className="w-3 h-3 rounded-full flex items-center justify-center text-white/90 font-bold"
+                    style={{
+                      backgroundColor: `hsl(${(360 / conditions.length) * index}, 70%, 60%)`,
+                      fontSize: '9px',
+                    }}
+                  >
+                    {index + 1}
+                  </div>
                   <span className="font-medium text-white">{condition.edge}</span>
                   {condition.description && (
                     <span className="text-white/70">- {condition.description}</span>
@@ -71,28 +79,29 @@ export default function BranchNode({ data, selected }: NodeProps<BranchNodeData>
         </div>
       </div>
       
-      {conditions.map((_, index) => (
-        <Handle
-          key={`source-${index}`}
-          type="source"
-          position={Position.Bottom}
-          id={`condition-${index}`}
-          className="w-3 h-3 bg-purple-500 border-2 border-white shadow-md"
-          style={{
-            bottom: -6,
-            left: `${20 + (index * 30)}%`,
-            transform: 'translateX(-50%)',
-          }}
-        />
-      ))}
-      
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="default"
-        className="w-3 h-3 bg-purple-500 border-2 border-white shadow-md"
-        style={{ bottom: -6 }}
-      />
+      {conditions.map((condition, index) => {
+        const handleCount = conditions.length;
+        const spacing = 80 / (handleCount + 1); // Distribute handles evenly
+        const leftPosition = spacing * (index + 1);
+        const handleColor = `hsl(${(360 / conditions.length) * index}, 70%, 60%)`;
+        
+        return (
+          <Handle
+            key={`source-${index}`}
+            type="source"
+            position={Position.Bottom}
+            id={`condition-${index}`}
+            className="w-4 h-4 border-2 border-white shadow-md"
+            style={{
+              bottom: -8,
+              left: `${leftPosition}%`,
+              transform: 'translateX(-50%)',
+              backgroundColor: handleColor,
+            }}
+            title={condition.edge}
+          />
+        );
+      })}
     </div>
   );
 }

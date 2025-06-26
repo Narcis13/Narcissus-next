@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { 
   Activity,
   AlertCircle,
+  Bell,
   CheckCircle,
   Clock,
   Code,
@@ -60,6 +61,20 @@ const iconMap: Record<string, LucideIcon> = {
   'integration': Package,
   'user': Users,
   'system': Settings,
+  'send': Mail,
+  'fetch': Globe,
+  'save': Database,
+  'process': Settings,
+  'validate': CheckCircle,
+  'error': AlertCircle,
+  'log': FileText,
+  'notification': Bell,
+  'list': Activity,
+  'switch': GitBranch,
+  'response': MessageSquare,
+  'format': Code,
+  'wait': Clock,
+  'analytics': Activity,
   'default': Zap,
 };
 
@@ -106,6 +121,18 @@ const categoryColors: Record<string, { bg: string; border: string; text: string;
     text: 'text-teal-700 dark:text-teal-300',
     icon: 'text-teal-600 dark:text-teal-400'
   },
+  'send': { 
+    bg: 'bg-gradient-to-br from-pink-500/20 to-rose-600/20', 
+    border: 'border-pink-500',
+    text: 'text-pink-700 dark:text-pink-300',
+    icon: 'text-pink-600 dark:text-pink-400'
+  },
+  'webhook': { 
+    bg: 'bg-gradient-to-br from-amber-500/20 to-amber-600/20', 
+    border: 'border-amber-500',
+    text: 'text-amber-700 dark:text-amber-300',
+    icon: 'text-amber-600 dark:text-amber-400'
+  },
   'default': { 
     bg: 'bg-gradient-to-br from-slate-500/20 to-slate-600/20', 
     border: 'border-slate-500',
@@ -129,12 +156,33 @@ export default function CustomNode({ data, selected }: NodeProps<CustomNodeData>
   const colors = categoryColors[category] || categoryColors.default;
   
   const getIcon = () => {
-    const iconKey = data.nodeId?.split('.').slice(0, 2).join('.') || 
-                   data.nodeId?.split('.')[0] || 
-                   category;
+    // Try multiple strategies to find the best icon
+    const nodeId = data.nodeId || '';
+    const parts = nodeId.split('.');
     
-    const Icon = iconMap[iconKey] || iconMap[category] || iconMap.default;
-    return Icon;
+    // Try full node ID first
+    if (iconMap[nodeId]) return iconMap[nodeId];
+    
+    // Try last part (action)
+    if (parts.length >= 3 && iconMap[parts[2]]) return iconMap[parts[2]];
+    
+    // Try middle part (type)
+    if (parts.length >= 2 && iconMap[parts[1]]) return iconMap[parts[1]];
+    
+    // Try first two parts
+    if (parts.length >= 2) {
+      const twoPartKey = parts.slice(0, 2).join('.');
+      if (iconMap[twoPartKey]) return iconMap[twoPartKey];
+    }
+    
+    // Try category
+    if (iconMap[category]) return iconMap[category];
+    
+    // Try first part
+    if (parts.length >= 1 && iconMap[parts[0]]) return iconMap[parts[0]];
+    
+    // Default
+    return iconMap.default;
   };
   
   const Icon = getIcon();

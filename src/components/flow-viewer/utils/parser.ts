@@ -44,9 +44,43 @@ function getNodeCategory(nodeId: string): string {
 }
 
 function getNodeLabel(nodeId: string): string {
+  // Special cases for common nodes
+  const labelMap: Record<string, string> = {
+    'data.fetch.http': 'HTTP Request',
+    'data.fetch.list': 'Fetch List',
+    'logic.condition.if': 'If Condition',
+    'logic.loop.controller': 'Loop Controller',
+    'data.transform.process': 'Process Data',
+    'data.save.database': 'Save to Database',
+    'send.email.notification': 'Send Email',
+    'send.email.summary': 'Email Summary',
+    'utility.debug.log': 'Debug Log',
+    'webhook.trigger.receive': 'Webhook Trigger',
+    'data.validate.schema': 'Validate Schema',
+    'ai.openai.completion': 'OpenAI Completion',
+    'ai.anthropic.claude': 'Claude AI',
+    'ai.response.parser': 'Parse AI Response',
+    'logic.condition.switch': 'Switch Condition',
+    'data.transform.format': 'Format Data',
+    'send.webhook.response': 'Webhook Response',
+    'send.error.notification': 'Error Notification',
+    'logic.delay.wait': 'Delay',
+    'utility.log.analytics': 'Log Analytics',
+    'data.transform.uppercase': 'Uppercase Transform',
+  };
+  
+  if (labelMap[nodeId]) {
+    return labelMap[nodeId];
+  }
+  
+  // Default parsing
   const parts = nodeId.split('.');
   if (parts.length >= 3) {
     return parts[2].split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  } else if (parts.length === 2) {
+    return parts[1].split('-').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   }
@@ -119,10 +153,19 @@ function parseNode(
           id: generateEdgeId(),
           source: lastLoopNodeId,
           target: loopNodeId,
-          sourceHandle: 'loop-back',
+          targetHandle: 'loop-return',
           type: 'smoothstep',
           animated: true,
-          style: { stroke: '#f59e0b' },
+          style: { 
+            stroke: '#f59e0b',
+            strokeWidth: 2,
+          },
+          markerEnd: {
+            type: 'arrowclosed',
+            width: 20,
+            height: 20,
+            color: '#f59e0b',
+          },
         });
       }
       

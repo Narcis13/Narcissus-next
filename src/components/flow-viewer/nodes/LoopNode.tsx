@@ -73,7 +73,15 @@ export default function LoopNode({ data, selected }: NodeProps<LoopNodeData>) {
         position={Position.Right}
         id="loop-back"
         className="w-3 h-3 bg-orange-500 border-2 border-white shadow-md"
-        style={{ right: -6 }}
+        style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
+      />
+      
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="loop-return"
+        className="w-3 h-3 bg-orange-500 border-2 border-white shadow-md"
+        style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
       />
     </div>
   );

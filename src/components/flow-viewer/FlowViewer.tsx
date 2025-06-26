@@ -51,6 +51,10 @@ const edgeOptions = {
     height: 20,
     color: '#7c3aed',
   },
+  pathOptions: {
+    offset: 0,
+    borderRadius: 10,
+  },
 };
 
 interface FlowViewerProps {
