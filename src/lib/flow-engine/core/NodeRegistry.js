@@ -105,6 +105,9 @@ export const NodeRegistry = {
             if (nodeDefinition && nodeDefinition.id && nodeDefinition.name && typeof nodeDefinition.implementation === 'function') {
                 const qualifiedKey = `${nodeDefinition.id}:${nodeDefinition.name}`;
                 scopeObject[qualifiedKey] = nodeDefinition; // Store the whole definition
+                
+                // Also add by simple ID for easier access
+                scopeObject[nodeDefinition.id] = nodeDefinition;
             } else {
                 console.warn(`[NodeRegistry.getScope] Skipping node due to missing id, name, or implementation:`, nodeDefinition.id || nodeDefinition);
             }

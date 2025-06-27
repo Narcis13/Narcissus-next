@@ -40,6 +40,75 @@ if (pubClient) {
   });
 }
 
+// Use a global symbol to prevent multiple Redis subscribers
+const GlobalSubscriber = Symbol.for('nextjs.flow.subscriber');
+
+interface GlobalSub {
+  [GlobalSubscriber]: Redis | null;
+}
+
+// Only create subscriber once globally
+let subClient = (global as unknown as GlobalSub)[GlobalSubscriber];
+
+if (!subClient && redisConnection && process.env.REDIS_URL) {
+  subClient = new Redis(process.env.REDIS_URL, {
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: false,
+    tls: {},
+    retryStrategy: (times) => {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    },
+    reconnectOnError: (err) => {
+      const targetError = "READONLY";
+      if (err.message.includes(targetError)) {
+        return true;
+      }
+      return false;
+    },
+  });
+  
+  // Store subscriber globally
+  (global as unknown as GlobalSub)[GlobalSubscriber] = subClient;
+
+  // Set up resume event listener
+  subClient.on('error', (err) => {
+    if (err.message && !err.message.includes('ECONNRESET')) {
+      console.error('[Worker] Redis sub client error:', err.message);
+    }
+  });
+  
+  subClient.on('ready', () => {
+    subClient!.subscribe('flowhub:resume', (err) => {
+      if (err) {
+        console.error('[Worker] Failed to subscribe to flowhub:resume:', err);
+      } else {
+        console.log('[Worker] Subscribed to flowhub:resume channel');
+      }
+    });
+  });
+  
+  subClient.on('message', (channel, message) => {
+    if (channel === 'flowhub:resume') {
+      try {
+        const { pauseId, resumeData } = JSON.parse(message);
+        console.log(`[Worker] Received resume request for pauseId: ${pauseId}`);
+        
+        // Resume the workflow using the local flowHub instance
+        const success = flowHub.resume(pauseId, resumeData);
+        
+        if (success) {
+          console.log(`[Worker] Successfully resumed workflow with pauseId: ${pauseId}`);
+        } else {
+          console.log(`[Worker] Failed to resume workflow with pauseId: ${pauseId} - not found in this worker`);
+        }
+      } catch (error) {
+        console.error('[Worker] Failed to process resume message:', error);
+      }
+    }
+  });
+}
+
 export function createFlowExecutionWorker() {
   if (!redisConnection) {
     throw new Error("Cannot create worker without Redis connection");
@@ -63,12 +132,23 @@ export function createFlowExecutionWorker() {
         // Convert workflow to FlowManager format
         const nodes = convertWorkflowToFlowNodes(workflow);
         
+        // Get the base scope from node registry
+        const baseScope = nodeRegistry.getScope();
+        
+        // Add simple utility functions to scope
+        try {
+          const simpleFunctions = require('@/lib/flow-engine/utils/simple-functions.js').default;
+          Object.assign(baseScope, simpleFunctions);
+        } catch (error) {
+          console.warn('[Worker] Could not load simple functions:', error);
+        }
+        
         // Create FlowManager instance
         const fm = FlowManager({
           nodes,
           initialState: context.input || {},
           instanceId: executionId,
-          scope: nodeRegistry.getScope(),
+          scope: baseScope,
         });
 
         // Track steps
@@ -329,32 +409,46 @@ function setupFlowEventListeners(
   };
 }
 
-// Worker instance
-let worker: Worker | null = null;
+// Use a global symbol to prevent multiple worker instances
+const GlobalWorker = Symbol.for('nextjs.flow.worker');
+
+interface Global {
+  [GlobalWorker]: Worker | null;
+}
 
 // Function to start the worker
 export const startWorker = () => {
   if (typeof process !== "undefined" && process.env.NODE_ENV !== "test") {
-    if (!worker && redisConnection) {
+    // Check if worker already exists globally
+    const existingWorker = (global as unknown as Global)[GlobalWorker];
+    if (existingWorker) {
+      console.log("Flow execution worker already running (reusing existing instance)");
+      return existingWorker;
+    }
+    
+    if (redisConnection) {
       try {
-        worker = createFlowExecutionWorker();
+        const worker = createFlowExecutionWorker();
+        // Store worker globally to prevent multiple instances
+        (global as unknown as Global)[GlobalWorker] = worker;
         console.log("Flow execution worker started");
+        return worker;
       } catch (error) {
         console.error("Failed to start flow execution worker:", error);
       }
-    } else if (!redisConnection) {
+    } else {
       console.warn("Redis connection not available, worker not started");
     }
-    return worker;
   }
   return null;
 };
 
 // Function to stop the worker
 export const stopWorker = async () => {
+  const worker = (global as unknown as Global)[GlobalWorker];
   if (worker) {
     await worker.close();
-    worker = null;
+    (global as unknown as Global)[GlobalWorker] = null;
     console.log("Flow execution worker stopped");
   }
 };

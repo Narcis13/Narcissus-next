@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, User, MessageSquare } from "lucide-react";
 
 export default function TestExecutionModesPage() {
   const [executionMode, setExecutionMode] = useState<"immediate" | "queued">("immediate");
@@ -14,6 +15,9 @@ export default function TestExecutionModesPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [testWorkflowJson, setTestWorkflowJson] = useState<any>(null);
+  const [activePauses, setActivePauses] = useState<any[]>([]);
+  const [humanInputValue, setHumanInputValue] = useState("");
+  const [workflowType, setWorkflowType] = useState<"simple" | "humanInLoop">("simple");
 
   useEffect(() => {
     // Connect to WebSocket for FlowHub events
@@ -28,6 +32,20 @@ export default function TestExecutionModesPage() {
       const data = JSON.parse(event.data);
       console.log('[TestExecutionModes] Received event:', data);
       setEvents(prev => [...prev, { ...data, timestamp: new Date() }]);
+      
+      // Handle flow paused events to show human input UI
+      if (data.type === 'flowPaused' && data.payload) {
+        const { pauseId, details, flowInstanceId } = data.payload;
+        if (details && details.type === 'text-input') {
+          setActivePauses(prev => [...prev, { pauseId, details, flowInstanceId }]);
+        }
+      }
+      
+      // Handle flow resumed events to remove from active pauses
+      if (data.type === 'flowResumed' && data.payload) {
+        const { pauseId } = data.payload;
+        setActivePauses(prev => prev.filter(p => p.pauseId !== pauseId));
+      }
     };
 
     ws.onclose = () => {
@@ -48,24 +66,54 @@ export default function TestExecutionModesPage() {
     setIsExecuting(true);
     setExecutionResult(null);
     setEvents([]); // Clear previous events
+    setActivePauses([]); // Clear previous pauses
 
     try {
+      // Choose workflow based on type
+      let workflowNodes;
+      if (workflowType === "humanInLoop") {
+        workflowNodes = [
+          { log: { message: "Step 1: Starting human-in-the-loop workflow" } },
+          { "human.input.text": { 
+            prompt: "Please enter some text to convert to uppercase:",
+            placeholder: "Type your text here...",
+            defaultValue: ""
+          } },
+          {
+            "submitted": [
+              { "text.transform.uppercase": { text: "${state.lastHumanInput}" } },
+              { log: { message: "Converted to uppercase: ${state.lastUppercaseText}" } }
+            ],
+            "cancelled": { log: { message: "User cancelled input" } }
+          },
+          { identity: { value: { 
+            message: "Human-in-the-loop workflow completed!",
+            userInput: "${state.lastHumanInput}",
+            uppercaseResult: "${state.lastUppercaseText}"
+          } } }
+        ];
+      } else {
+        workflowNodes = [
+          { log: { message: "Step 1: Starting workflow" } },
+          { log: { message: "Step 2: Processing data from ${testData}" } },
+          { delay: { ms: 1000 } },
+          { log: { message: "Step 3: Workflow started at ${timestamp}" } },
+          { identity: { value: { 
+            message: "Workflow completed successfully!",
+            receivedData: "${testData}",
+            startTime: "${timestamp}"
+          } } }
+        ];
+      }
+
       // First, create a workflow in the database
       const workflowData = {
-        name: "Test Execution Modes",
-        description: "Test workflow for immediate and queued execution modes",
+        name: workflowType === "humanInLoop" ? "Test Human-in-the-Loop" : "Test Execution Modes",
+        description: workflowType === "humanInLoop" 
+          ? "Test workflow with human input for immediate and queued execution modes"
+          : "Test workflow for immediate and queued execution modes",
         jsonData: {
-          nodes: [
-            { log: { message: "Step 1: Starting workflow" } },
-            { log: { message: "Step 2: Processing data from ${testData}" } },
-            { delay: { ms: 1000 } },
-            { log: { message: "Step 3: Workflow started at ${timestamp}" } },
-            { identity: { value: { 
-              message: "Workflow completed successfully!",
-              receivedData: "${testData}",
-              startTime: "${timestamp}"
-            } } }
-          ]
+          nodes: workflowNodes
         }
       };
 
@@ -159,6 +207,52 @@ export default function TestExecutionModesPage() {
     setEvents([]);
   };
 
+  const submitHumanInput = async (pauseId: string, value: string) => {
+    try {
+      const response = await fetch("/api/workflow/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pauseId,
+          resumeData: { value }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit human input");
+      }
+
+      const result = await response.json();
+      console.log("Human input submitted:", result);
+      
+      // Clear the input
+      setHumanInputValue("");
+    } catch (error) {
+      console.error("Error submitting human input:", error);
+    }
+  };
+
+  const cancelHumanInput = async (pauseId: string) => {
+    try {
+      const response = await fetch("/api/workflow/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pauseId,
+          resumeData: { cancelled: true }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to cancel human input");
+      }
+
+      console.log("Human input cancelled");
+    } catch (error) {
+      console.error("Error cancelling human input:", error);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Test Execution Modes</h1>
@@ -171,6 +265,20 @@ export default function TestExecutionModesPage() {
               <CardDescription>Choose execution mode and run test workflow</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label className="text-base mb-3 block">Workflow Type</Label>
+                <RadioGroup value={workflowType} onValueChange={(value) => setWorkflowType(value as any)}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="simple" id="simple" />
+                    <Label htmlFor="simple">Simple (automatic)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="humanInLoop" id="humanInLoop" />
+                    <Label htmlFor="humanInLoop">Human-in-the-Loop</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
               <div>
                 <Label className="text-base mb-3 block">Execution Mode</Label>
                 <RadioGroup value={executionMode} onValueChange={(value) => setExecutionMode(value as any)}>
@@ -212,6 +320,54 @@ export default function TestExecutionModesPage() {
                 <pre className="text-sm overflow-x-auto bg-muted p-3 rounded">
                   {JSON.stringify(testWorkflowJson, null, 2)}
                 </pre>
+              </CardContent>
+            </Card>
+          )}
+
+          {activePauses.length > 0 && (
+            <Card className="mb-6 border-2 border-primary">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Human Input Required
+                </CardTitle>
+                <CardDescription>The workflow is waiting for your input</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {activePauses.map((pause) => (
+                  <div key={pause.pauseId} className="space-y-4">
+                    <div>
+                      <Label className="text-base mb-2 block">{pause.details.prompt}</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder={pause.details.placeholder || "Enter text..."}
+                          value={humanInputValue}
+                          onChange={(e) => setHumanInputValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              submitHumanInput(pause.pauseId, humanInputValue);
+                            }
+                          }}
+                          className="flex-1"
+                        />
+                        <Button 
+                          onClick={() => submitHumanInput(pause.pauseId, humanInputValue)}
+                          disabled={!humanInputValue}
+                          variant="default"
+                        >
+                          Submit
+                        </Button>
+                        <Button 
+                          onClick={() => cancelHumanInput(pause.pauseId)}
+                          variant="outline"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
@@ -276,11 +432,28 @@ export default function TestExecutionModesPage() {
       <div className="mt-6 p-4 bg-muted rounded-lg">
         <h3 className="font-semibold mb-2">Test Instructions:</h3>
         <ol className="list-decimal list-inside space-y-1 text-sm">
-          <li>Select "Immediate" mode to run workflows synchronously (existing behavior)</li>
-          <li>Select "Queued" mode to run workflows through Redis/Upstash queue</li>
-          <li>Click "Execute Test Workflow" to run a simple multi-step workflow</li>
-          <li>Watch the FlowHub Events panel to see real-time events from both modes</li>
-          <li>In queued mode, events should still appear via Redis pub/sub</li>
+          <li>Choose a workflow type:
+            <ul className="list-disc list-inside ml-4 mt-1">
+              <li><strong>Simple:</strong> Automatic workflow with delays and logging</li>
+              <li><strong>Human-in-the-Loop:</strong> Workflow that pauses for user input</li>
+            </ul>
+          </li>
+          <li>Select an execution mode:
+            <ul className="list-disc list-inside ml-4 mt-1">
+              <li><strong>Immediate:</strong> Synchronous execution (existing behavior)</li>
+              <li><strong>Queued:</strong> Asynchronous via Redis/Upstash queue</li>
+            </ul>
+          </li>
+          <li>Click "Execute Test Workflow" to start</li>
+          <li>For Human-in-the-Loop workflows:
+            <ul className="list-disc list-inside ml-4 mt-1">
+              <li>A blue input box will appear when input is needed</li>
+              <li>Enter text and click Submit (or press Enter)</li>
+              <li>The workflow will convert your text to uppercase</li>
+            </ul>
+          </li>
+          <li>Watch the FlowHub Events panel for real-time updates</li>
+          <li>Both execution modes support human input via pause/resume</li>
         </ol>
       </div>
     </div>

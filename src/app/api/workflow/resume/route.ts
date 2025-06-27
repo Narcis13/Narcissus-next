@@ -1,10 +1,35 @@
 // src/app/api/workflow/resume/route.ts
 import { NextResponse } from 'next/server';
 import { flowHub } from '@/lib/flow-engine/singletons';
+import Redis from 'ioredis';
+import { redisConnection } from '@/lib/redis/config';
 
+// Create a Redis publisher for cross-process communication
+const pubClient = redisConnection && process.env.REDIS_URL ? new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: false,
+  tls: {},
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
+  reconnectOnError: (err) => {
+    const targetError = "READONLY";
+    if (err.message.includes(targetError)) {
+      return true;
+    }
+    return false;
+  },
+}) : null;
 
-// Run initialization logic once.
-
+// Handle pub client errors gracefully
+if (pubClient) {
+  pubClient.on('error', (err) => {
+    if (err.message && !err.message.includes('ECONNRESET')) {
+      console.error('[Resume API] Redis pub client error:', err.message);
+    }
+  });
+}
 
 export async function POST(request: Request) {
     try {
@@ -17,7 +42,23 @@ export async function POST(request: Request) {
             );
         }
         
+        // First try local resume (for immediate execution mode)
         const success = flowHub.resume(pauseId, resumeData);
+
+        if (!success && pubClient) {
+            // If local resume failed, try publishing to Redis for queued execution
+            console.log(`[Resume API] Local resume failed for ${pauseId}, publishing to Redis`);
+            
+            await pubClient.publish('flowhub:resume', JSON.stringify({
+                pauseId,
+                resumeData
+            }));
+            
+            return NextResponse.json({ 
+                success: true, 
+                message: `Resume request sent for pauseId '${pauseId}'.` 
+            });
+        }
 
         if (!success) {
             return NextResponse.json({ 

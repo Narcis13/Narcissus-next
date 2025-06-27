@@ -57,11 +57,22 @@ export abstract class BaseExecutionStrategy implements ExecutionStrategy {
     // Convert workflow to FlowManager nodes format
     const nodes = this.convertWorkflowToFlowNodes(workflow);
     
+    // Get the base scope from node registry
+    const baseScope = nodeRegistry.getScope();
+    
+    // Add simple utility functions to scope
+    try {
+      const simpleFunctions = require('@/lib/flow-engine/utils/simple-functions.js').default;
+      Object.assign(baseScope, simpleFunctions);
+    } catch (error) {
+      console.warn('[BaseStrategy] Could not load simple functions:', error);
+    }
+    
     const fm = FlowManager({
       nodes,
       initialState: workflow.initialState || context.input || {},
       instanceId: context.executionId,
-      scope: nodeRegistry.getScope(),
+      scope: baseScope,
       initialInput: context.input
     });
 

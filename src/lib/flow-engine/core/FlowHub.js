@@ -6,6 +6,17 @@
  * step events from FlowManager instances.
  */
 const FlowHub = (function() {
+    // Try to get globalEventEmitter if available
+    let globalEventEmitter = null;
+    try {
+        // In Node.js environment
+        if (typeof global !== 'undefined' && global.__flowEngineGlobalEmitter) {
+            globalEventEmitter = global.__flowEngineGlobalEmitter;
+        }
+    } catch (e) {
+        // Ignore errors in browser environment
+    }
+    
     // _pausedFlows: Stores active pause states.
     // Key: pauseId (string)
     // Value: { resolve: Function (to resume the Promise), details: any, flowInstanceId: string }
@@ -35,6 +46,7 @@ const FlowHub = (function() {
          * @param {object} eventData - The data to be passed to the listeners.
          */
         _emitEvent(eventName, eventData) {
+            // Emit to local listeners
             if (_listeners[eventName]) {
                 _listeners[eventName].forEach((callback, index) => {
                     try {
@@ -44,6 +56,15 @@ const FlowHub = (function() {
                         // Silently handle errors
                     }
                 });
+            }
+            
+            // Also emit to globalEventEmitter for cross-process communication
+            if (globalEventEmitter) {
+                try {
+                    globalEventEmitter.emit(eventName, eventData);
+                } catch (e) {
+                    // Silently handle errors
+                }
             }
         },
 
