@@ -66,6 +66,12 @@ export async function POST(request: Request) {
         // Execute workflow
         const result = await executionManager.execute(workflow, context, executionOptions);
 
+        console.log('[Workflow Run API] Execution result:', {
+            executionId: result.executionId,
+            status: result.status,
+            mode: executionOptions.mode
+        });
+
         return NextResponse.json({
             message: result.status === 'pending' ? 'Workflow queued for execution.' : 'Workflow execution started.',
             executionId: result.executionId,

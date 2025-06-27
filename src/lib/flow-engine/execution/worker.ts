@@ -6,11 +6,45 @@ import { ExecutionStep } from "./types";
 import { FlowExecutionJob } from "@/lib/redis/queues";
 import redisConnection from "@/lib/redis/config";
 import Redis from "ioredis";
+import { ExecutionCache } from "./redis-cache";
 
-// Create a separate Redis connection for pub/sub
-const pubClient = redisConnection ? new Redis(process.env.REDIS_URL!) : null;
+// Create a separate Redis connection for pub/sub with proper configuration
+const pubClient = redisConnection && process.env.REDIS_URL ? new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: false,
+  tls: {},
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
+  reconnectOnError: (err) => {
+    const targetError = "READONLY";
+    if (err.message.includes(targetError)) {
+      return true;
+    }
+    return false;
+  },
+}) : null;
+
+// Handle pub client errors gracefully
+if (pubClient) {
+  pubClient.on('error', (err) => {
+    // Only log meaningful errors, not connection resets
+    if (err.message && !err.message.includes('ECONNRESET')) {
+      console.error('[Worker] Redis pub client error:', err.message);
+    }
+  });
+  
+  pubClient.on('connect', () => {
+    console.log('[Worker] Redis pub client connected');
+  });
+}
 
 export function createFlowExecutionWorker() {
+  if (!redisConnection) {
+    throw new Error("Cannot create worker without Redis connection");
+  }
+  
   const worker = new Worker<FlowExecutionJob>(
     "flow-execution",
     async (job: Job<FlowExecutionJob>) => {
@@ -24,6 +58,7 @@ export function createFlowExecutionWorker() {
 
         // Mark execution as running
         await ExecutionPersistence.markExecutionAsRunning(executionId);
+        await ExecutionCache.update(executionId, { status: "running" });
 
         // Convert workflow to FlowManager format
         const nodes = convertWorkflowToFlowNodes(workflow);
@@ -117,13 +152,19 @@ export function createFlowExecutionWorker() {
           }
 
           // Save execution result with steps
-          await ExecutionPersistence.saveExecutionResult({
+          const result = {
             executionId,
-            status: "completed",
+            status: "completed" as const,
             output,
             completedAt: new Date(),
             steps,
-          });
+          };
+          
+          await ExecutionPersistence.saveExecutionResult(result);
+          await ExecutionCache.set(executionId, result);
+
+          // Ensure the execution status is saved
+          console.log(`[Worker] Execution ${executionId} completed and saved`);
 
           // Emit flow end event via Redis pub/sub
           if (pubClient) {
@@ -276,15 +317,15 @@ function setupFlowEventListeners(
     }
   };
 
-  flowHub.on("flowManagerStep", handleStep);
-  flowHub.on("flowPaused", handlePause);
-  flowHub.on("flowResumed", handleResume);
+  flowHub.addEventListener("flowManagerStep", handleStep);
+  flowHub.addEventListener("flowPaused", handlePause);
+  flowHub.addEventListener("flowResumed", handleResume);
 
   // Return cleanup function
   return () => {
-    flowHub.off("flowManagerStep", handleStep);
-    flowHub.off("flowPaused", handlePause);
-    flowHub.off("flowResumed", handleResume);
+    flowHub.removeEventListener("flowManagerStep", handleStep);
+    flowHub.removeEventListener("flowPaused", handlePause);
+    flowHub.removeEventListener("flowResumed", handleResume);
   };
 }
 
@@ -294,9 +335,15 @@ let worker: Worker | null = null;
 // Function to start the worker
 export const startWorker = () => {
   if (typeof process !== "undefined" && process.env.NODE_ENV !== "test") {
-    if (!worker) {
-      worker = createFlowExecutionWorker();
-      console.log("Flow execution worker started");
+    if (!worker && redisConnection) {
+      try {
+        worker = createFlowExecutionWorker();
+        console.log("Flow execution worker started");
+      } catch (error) {
+        console.error("Failed to start flow execution worker:", error);
+      }
+    } else if (!redisConnection) {
+      console.warn("Redis connection not available, worker not started");
     }
     return worker;
   }

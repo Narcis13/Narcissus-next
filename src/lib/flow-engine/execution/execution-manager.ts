@@ -37,22 +37,24 @@ export class ExecutionManager {
   }
 
   async getStatus(executionId: string): Promise<ExecutionResult> {
-    // Check which strategy was used by looking at the execution record
-    const execution = await ExecutionPersistence.getExecution(executionId);
-    if (!execution) {
-      throw new Error(`Execution ${executionId} not found`);
-    }
-
-    // If status is pending, it's likely queued
-    if (execution.status === "pending") {
-      return this.queuedStrategy.getStatus(executionId);
-    }
-
-    // Otherwise, try immediate first
+    // First try the queued strategy which checks Redis cache
     try {
-      return this.immediateStrategy.getStatus(executionId);
-    } catch {
-      return this.queuedStrategy.getStatus(executionId);
+      return await this.queuedStrategy.getStatus(executionId);
+    } catch (error: any) {
+      // If not found in queued strategy, check if it's an immediate execution
+      const execution = await ExecutionPersistence.getExecution(executionId);
+      if (!execution) {
+        throw new Error(`Execution ${executionId} not found`);
+      }
+
+      console.log('[ExecutionManager] Found execution with status:', execution.status, 'mode:', execution.executionMode);
+
+      // Check execution mode to determine which strategy to use
+      if (execution.executionMode === "queued") {
+        return this.queuedStrategy.getStatus(executionId);
+      } else {
+        return this.immediateStrategy.getStatus(executionId);
+      }
     }
   }
 

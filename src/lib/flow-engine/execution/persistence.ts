@@ -1,7 +1,7 @@
 
 import { db } from "@/db";
 import { workflowExecutions, WorkflowExecutionStatus } from "@/db/schema/workflow-executions";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { ExecutionResult, ExecutionStep } from "./types";
 
 export class ExecutionPersistence {
@@ -11,17 +11,48 @@ export class ExecutionPersistence {
     executionMode?: "immediate" | "queued";
     metadata?: Record<string, any>;
   }) {
-    const [execution] = await db
-      .insert(workflowExecutions)
-      .values({
+    console.log('[ExecutionPersistence] Creating execution for workflow:', data.workflowId);
+    
+    try {
+      console.log('[ExecutionPersistence] Insert values:', {
         workflowId: data.workflowId,
         status: data.status || "pending",
         executionMode: data.executionMode || "immediate",
-        metadata: data.metadata || {},
-      })
-      .returning();
-    
-    return execution;
+      });
+      
+      const result = await db
+        .insert(workflowExecutions)
+        .values({
+          workflowId: data.workflowId,
+          status: data.status || "pending",
+          executionMode: data.executionMode || "immediate",
+          metadata: data.metadata || {},
+        })
+        .returning();
+      
+      console.log('[ExecutionPersistence] Insert result:', result);
+      
+      if (!result || result.length === 0) {
+        throw new Error('No execution returned from insert');
+      }
+      
+      const execution = result[0];
+      console.log('[ExecutionPersistence] Created execution with ID:', execution.id);
+      
+      // Verify it was saved by reading it back
+      const verification = await db
+        .select()
+        .from(workflowExecutions)
+        .where(eq(workflowExecutions.id, execution.id));
+      
+      console.log('[ExecutionPersistence] Verification - found:', verification.length > 0);
+      
+      return execution;
+    } catch (error: any) {
+      console.error('[ExecutionPersistence] Failed to create execution:', error);
+      console.error('[ExecutionPersistence] Error details:', error.message);
+      throw error;
+    }
   }
 
   static async updateExecution(
@@ -48,11 +79,30 @@ export class ExecutionPersistence {
   }
 
   static async getExecution(executionId: string) {
-    const [execution] = await db
+    console.log('[ExecutionPersistence] Getting execution with ID:', executionId);
+    
+    // First, let's see all executions (order by most recent first)
+    const allExecutions = await db
+      .select({ 
+        id: workflowExecutions.id, 
+        status: workflowExecutions.status,
+        startedAt: workflowExecutions.startedAt 
+      })
+      .from(workflowExecutions)
+      .orderBy(sql`${workflowExecutions.startedAt} DESC`)
+      .limit(10);
+    
+    console.log('[ExecutionPersistence] Recent executions:', allExecutions.map(e => ({ id: e.id.substring(0, 8), status: e.status })));
+    
+    // Force a fresh read by using a new query
+    const executions = await db
       .select()
       .from(workflowExecutions)
-      .where(eq(workflowExecutions.id, executionId))
-      .limit(1);
+      .where(eq(workflowExecutions.id, executionId));
+    
+    const execution = executions[0];
+    
+    console.log('[ExecutionPersistence] Found execution:', execution ? 'Yes' : 'No');
     
     return execution;
   }

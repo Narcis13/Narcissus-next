@@ -3,10 +3,12 @@ import { ExecutionManager } from '@/lib/flow-engine/execution';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ executionId: string }> }
 ) {
   try {
-    const executionId = params.id;
+    const { executionId } = await params;
+    
+    console.log('[Status API] Checking status for execution ID:', executionId);
     
     if (!executionId) {
       return NextResponse.json(
@@ -19,7 +21,7 @@ export async function GET(
     const executionManager = ExecutionManager.getInstance();
     
     // Get execution status
-    const status = await executionManager.getExecutionStatus(executionId);
+    const status = await executionManager.getStatus(executionId);
     
     return NextResponse.json(status);
   } catch (error: any) {

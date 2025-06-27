@@ -13,6 +13,7 @@ export default function TestExecutionModesPage() {
   const [executionResult, setExecutionResult] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [testWorkflowJson, setTestWorkflowJson] = useState<any>(null);
 
   useEffect(() => {
     // Connect to WebSocket for FlowHub events
@@ -49,18 +50,53 @@ export default function TestExecutionModesPage() {
     setEvents([]); // Clear previous events
 
     try {
-      const testWorkflow = {
-        id: "test-workflow-" + Date.now(),
+      // First, create a workflow in the database
+      const workflowData = {
         name: "Test Execution Modes",
-        nodes: [
-          { log: { message: "Step 1: Starting workflow" } },
-          { log: { message: "Step 2: Processing data" } },
-          { delay: { ms: 1000 } },
-          { log: { message: "Step 3: Completing workflow" } },
-          { identity: { value: "Workflow completed successfully!" } }
-        ],
-        inputs: {}
+        description: "Test workflow for immediate and queued execution modes",
+        jsonData: {
+          nodes: [
+            { log: { message: "Step 1: Starting workflow" } },
+            { log: { message: "Step 2: Processing data from ${testData}" } },
+            { delay: { ms: 1000 } },
+            { log: { message: "Step 3: Workflow started at ${timestamp}" } },
+            { identity: { value: { 
+              message: "Workflow completed successfully!",
+              receivedData: "${testData}",
+              startTime: "${timestamp}"
+            } } }
+          ]
+        }
       };
+
+      // Create workflow
+      const createResponse = await fetch("/api/workflows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(workflowData),
+      });
+
+      if (!createResponse.ok) {
+        const error = await createResponse.text();
+        throw new Error(`Failed to create workflow: ${error}`);
+      }
+
+      const createdWorkflow = await createResponse.json();
+      console.log("Created workflow:", createdWorkflow);
+
+      // Now execute the workflow
+      const testWorkflow = {
+        id: createdWorkflow.id,
+        name: createdWorkflow.name,
+        nodes: createdWorkflow.jsonData.nodes,
+        initialState: {
+          testData: "Hello from test workflow",
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      // Store the workflow JSON for display
+      setTestWorkflowJson(testWorkflow);
 
       const response = await fetch("/api/workflow/run", {
         method: "POST",
@@ -73,7 +109,8 @@ export default function TestExecutionModesPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const error = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${error}`);
       }
 
       const result = await response.json();
@@ -83,9 +120,14 @@ export default function TestExecutionModesPage() {
       if (executionMode === "queued" && result.status === "pending") {
         pollExecutionStatus(result.executionId);
       }
-    } catch (error) {
+
+      // Clean up: delete the test workflow
+      await fetch(`/api/workflows/${createdWorkflow.id}`, {
+        method: "DELETE",
+      });
+    } catch (error: any) {
       console.error("Execution failed:", error);
-      setExecutionResult({ error: error.message });
+      setExecutionResult({ error: error.message || "Unknown error occurred" });
     } finally {
       setIsExecuting(false);
     }
@@ -159,6 +201,20 @@ export default function TestExecutionModesPage() {
               </Button>
             </CardContent>
           </Card>
+
+          {testWorkflowJson && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Test Workflow JSON</CardTitle>
+                <CardDescription>The workflow being executed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-sm overflow-x-auto bg-muted p-3 rounded">
+                  {JSON.stringify(testWorkflowJson, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
 
           {executionResult && (
             <Card>

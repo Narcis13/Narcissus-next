@@ -16,7 +16,9 @@
     "db:push": "drizzle-kit push",
     "db:fix-migration-state": "tsx src/db/fix-migration-state.ts",
     "worker": "tsx src/lib/flow-engine/start-worker.ts",
-    "worker:dev": "tsx --watch src/lib/flow-engine/start-worker.ts"
+    "worker:dev": "tsx --watch src/lib/flow-engine/start-worker.ts",
+    "diagnose-queue": "tsx src/scripts/diagnose-queue.ts",
+    "test-worker": "tsx src/scripts/test-queue-worker.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",
@@ -27,6 +29,7 @@
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-navigation-menu": "^1.2.13",
+    "@radix-ui/react-radio-group": "^1.3.7",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.12",

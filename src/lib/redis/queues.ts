@@ -1,11 +1,8 @@
 import { Queue, Worker, QueueEvents } from "bullmq";
 import redisConnection from "./config";
 
-if (!redisConnection) {
-  throw new Error("Redis connection is not available. Please configure REDIS_URL.");
-}
-
-const queueOptions = {
+// Only create queues if Redis is available
+const queueOptions = redisConnection ? {
   connection: redisConnection,
   defaultJobOptions: {
     attempts: 3,
@@ -22,13 +19,13 @@ const queueOptions = {
       count: 100,
     },
   },
-};
+} : null;
 
-export const flowExecutionQueue = new Queue("flow-execution", queueOptions);
+export const flowExecutionQueue = redisConnection && queueOptions ? new Queue("flow-execution", queueOptions) : null;
 
-export const queueEvents = new QueueEvents("flow-execution", {
+export const queueEvents = redisConnection ? new QueueEvents("flow-execution", {
   connection: redisConnection,
-});
+}) : null;
 
 export interface FlowExecutionJob {
   flowId: string;
@@ -41,6 +38,11 @@ export interface FlowExecutionJob {
 export const createFlowExecutionWorker = (
   processor: (job: any) => Promise<any>
 ) => {
+  if (!redisConnection) {
+    console.warn("Redis connection not available, worker creation skipped");
+    return null;
+  }
+  
   return new Worker("flow-execution", processor, {
     connection: redisConnection,
     concurrency: 5,

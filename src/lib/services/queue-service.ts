@@ -1,17 +1,14 @@
 import { flowExecutionQueue, queueEvents, FlowExecutionJob } from "../redis/queues";
-import { v4 as uuidv4 } from "uuid";
 
 export class QueueService {
-  static async addFlowExecution(job: Omit<FlowExecutionJob, "executionId">) {
-    const executionId = uuidv4();
-    const jobData: FlowExecutionJob = {
-      ...job,
-      executionId,
-    };
+  static async addFlowExecution(job: FlowExecutionJob) {
+    if (!flowExecutionQueue) {
+      throw new Error("Queue not available - Redis connection required");
+    }
 
     const queueJob = await flowExecutionQueue.add(
-      `flow-${job.flowId}-${executionId}`,
-      jobData,
+      `flow-${job.flowId}-${job.executionId}`,
+      job,
       {
         priority: 1,
       }
@@ -19,11 +16,15 @@ export class QueueService {
 
     return {
       jobId: queueJob.id,
-      executionId,
+      executionId: job.executionId,
     };
   }
 
   static async getJobStatus(jobId: string) {
+    if (!flowExecutionQueue) {
+      throw new Error("Queue not available - Redis connection required");
+    }
+    
     const job = await flowExecutionQueue.getJob(jobId);
     if (!job) {
       return null;

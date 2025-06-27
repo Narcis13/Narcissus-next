@@ -85,15 +85,43 @@ export const setupWebSocket = () => {
   if (redisConnection && process.env.REDIS_URL) {
     console.log('[WebSocket] Setting up Redis pub/sub for queued execution events...');
     
-    // Create a dedicated subscriber connection
-    const subscriber = new Redis(process.env.REDIS_URL);
+    // Create a dedicated subscriber connection with proper configuration
+    const subscriber = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 3,
+      enableReadyCheck: false,
+      tls: {},
+      retryStrategy: (times) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      reconnectOnError: (err) => {
+        const targetError = "READONLY";
+        if (err.message.includes(targetError)) {
+          return true;
+        }
+        return false;
+      },
+    });
     
-    subscriber.subscribe('flowhub:events', (err) => {
-      if (err) {
-        console.error('[WebSocket] Failed to subscribe to Redis channel:', err);
-      } else {
-        console.log('[WebSocket] Subscribed to flowhub:events channel');
+    subscriber.on('connect', () => {
+      console.log('[WebSocket] Redis subscriber connected');
+    });
+    
+    subscriber.on('error', (err) => {
+      // Only log the error once, not repeatedly
+      if (err.message && !err.message.includes('ECONNRESET')) {
+        console.error('[WebSocket] Redis subscriber error:', err.message);
       }
+    });
+    
+    subscriber.on('ready', () => {
+      subscriber.subscribe('flowhub:events', (err) => {
+        if (err) {
+          console.error('[WebSocket] Failed to subscribe to Redis channel:', err);
+        } else {
+          console.log('[WebSocket] Subscribed to flowhub:events channel');
+        }
+      });
     });
     
     subscriber.on('message', (channel, message) => {
@@ -113,10 +141,6 @@ export const setupWebSocket = () => {
           console.error('[WebSocket] Failed to parse Redis message:', error);
         }
       }
-    });
-    
-    subscriber.on('error', (err) => {
-      console.error('[WebSocket] Redis subscriber error:', err);
     });
   }
 

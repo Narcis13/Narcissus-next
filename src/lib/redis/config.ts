@@ -27,7 +27,10 @@ if (redisUrl) {
   });
 
   redisConnection.on("error", (err) => {
-    console.error("Redis connection error:", err);
+    // Only log meaningful errors, not connection resets
+    if (err.message && !err.message.includes('ECONNRESET')) {
+      console.error("Redis connection error:", err.message);
+    }
   });
 } else {
   console.warn("REDIS_URL is not defined. Redis features will be disabled.");
