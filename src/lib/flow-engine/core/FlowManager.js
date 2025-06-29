@@ -8,17 +8,8 @@ import FlowHub from './FlowHub.js';
  * @param {any} data - The event data
  */
 function emitToAllChannels(eventName, data) {
-  // Emit to FlowHub as usual
+  // Emit to FlowHub which will handle both local and global event emission
   FlowHub._emitEvent(eventName, data);
-  
-  // Also emit to global event emitter for cross-context communication
-  try {
-    if (typeof global !== 'undefined' && global.__flowEngineGlobalEmitter) {
-      global.__flowEngineGlobalEmitter.emit(eventName, data);
-    }
-  } catch (error) {
-    // Silently handle errors
-  }
 }
 
 /**

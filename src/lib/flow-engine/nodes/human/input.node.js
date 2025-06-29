@@ -61,6 +61,8 @@ export default {
     const pauseId = `human-input-${this.flowInstanceId}-${Date.now()}`;
     
     try {
+      console.log(`[Human Input Node] Requesting pause with ID: ${pauseId}`);
+      
       // Request human input through FlowHub
       const userResponse = await this.humanInput({
         type: "text-input",

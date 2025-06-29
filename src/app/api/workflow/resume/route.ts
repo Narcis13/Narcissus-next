@@ -42,8 +42,14 @@ export async function POST(request: Request) {
             );
         }
         
+        // Debug: Check active pauses before resume
+        const activePauses = flowHub.getActivePauses();
+        console.log(`[Resume API] Active pauses before resume:`, activePauses);
+        console.log(`[Resume API] Looking for pauseId: ${pauseId}`);
+        
         // First try local resume (for immediate execution mode)
         const success = flowHub.resume(pauseId, resumeData);
+        console.log(`[Resume API] Local resume result for ${pauseId}: ${success}`);
 
         if (!success && pubClient) {
             // If local resume failed, try publishing to Redis for queued execution
@@ -63,7 +69,7 @@ export async function POST(request: Request) {
         if (!success) {
             return NextResponse.json({ 
                 success: false, 
-                message: `Flow with pauseId '${pauseId}' not found or already resumed.`
+                message: `Flow with pauseId '${pauseId}' not found or already resumed. Active pauses: ${JSON.stringify(activePauses)}`
             });
         }
 

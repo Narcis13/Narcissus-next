@@ -9,6 +9,11 @@ declare global {
   var __flowEngineNodeRegistry: any | undefined;
   var __flowEngineFlowHub: any | undefined;
   var __flowEngineTriggerManager: any | undefined;
+  var __flowHubState: {
+    pausedFlows: Map<string, any>;
+    listeners: Record<string, Function[]>;
+    pauseIdCounter: number;
+  } | undefined;
 }
 
 // Initialize global event emitter

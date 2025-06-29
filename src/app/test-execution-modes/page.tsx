@@ -37,7 +37,13 @@ export default function TestExecutionModesPage() {
       if (data.type === 'flowPaused' && data.payload) {
         const { pauseId, details, flowInstanceId } = data.payload;
         if (details && details.type === 'text-input') {
-          setActivePauses(prev => [...prev, { pauseId, details, flowInstanceId }]);
+          setActivePauses(prev => {
+            // Check if this pauseId already exists to avoid duplicates
+            if (prev.some(p => p.pauseId === pauseId)) {
+              return prev;
+            }
+            return [...prev, { pauseId, details, flowInstanceId }];
+          });
         }
       }
       
@@ -81,15 +87,15 @@ export default function TestExecutionModesPage() {
           } },
           {
             "submitted": [
-              { "text.transform.uppercase": { text: "${state.lastHumanInput}" } },
-              { log: { message: "Converted to uppercase: ${state.lastUppercaseText}" } }
+              { "text.transform.uppercase": { text: "${lastHumanInput}" } },
+              { log: { message: "Converted to uppercase: ${lastUppercaseText}" } }
             ],
             "cancelled": { log: { message: "User cancelled input" } }
           },
           { identity: { value: { 
             message: "Human-in-the-loop workflow completed!",
-            userInput: "${state.lastHumanInput}",
-            uppercaseResult: "${state.lastUppercaseText}"
+            userInput: "${lastHumanInput}",
+            uppercaseResult: "${lastUppercaseText}"
           } } }
         ];
       } else {
@@ -334,8 +340,8 @@ export default function TestExecutionModesPage() {
                 <CardDescription>The workflow is waiting for your input</CardDescription>
               </CardHeader>
               <CardContent>
-                {activePauses.map((pause) => (
-                  <div key={pause.pauseId} className="space-y-4">
+                {activePauses.map((pause, index) => (
+                  <div key={`${pause.pauseId}-${index}`} className="space-y-4">
                     <div>
                       <Label className="text-base mb-2 block">{pause.details.prompt}</Label>
                       <div className="flex gap-2">

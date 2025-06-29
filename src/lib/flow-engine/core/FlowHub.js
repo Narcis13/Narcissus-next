@@ -5,6 +5,18 @@
  * This version uses a custom, environment-agnostic event bus and also handles
  * step events from FlowManager instances.
  */
+
+// Store FlowHub state in global to persist across module reloads in development
+if (typeof global !== 'undefined') {
+    if (!global.__flowHubState) {
+        global.__flowHubState = {
+            pausedFlows: new Map(),
+            listeners: {},
+            pauseIdCounter: 0
+        };
+    }
+}
+
 const FlowHub = (function() {
     // Try to get globalEventEmitter if available
     let globalEventEmitter = null;
@@ -17,17 +29,24 @@ const FlowHub = (function() {
         // Ignore errors in browser environment
     }
     
+    // Use global state if available, otherwise create local state
+    const state = (typeof global !== 'undefined' && global.__flowHubState) ? global.__flowHubState : {
+        pausedFlows: new Map(),
+        listeners: {},
+        pauseIdCounter: 0
+    };
+    
     // _pausedFlows: Stores active pause states.
     // Key: pauseId (string)
     // Value: { resolve: Function (to resume the Promise), details: any, flowInstanceId: string }
-    const _pausedFlows = new Map();
+    const _pausedFlows = state.pausedFlows;
 
     // _listeners: Stores event listeners for the custom event bus.
     // Key: eventName (string)
     // Value: Array of callback functions
-    const _listeners = {};
+    const _listeners = state.listeners;
 
-    let _pauseIdCounter = 0; // Simple counter for generating unique parts of pause IDs.
+    let _pauseIdCounter = state.pauseIdCounter; // Simple counter for generating unique parts of pause IDs.
 
     /**
      * Generates a unique ID for a pause request.
@@ -36,6 +55,10 @@ const FlowHub = (function() {
      */
     function generatePauseId(prefix = 'pause') {
         _pauseIdCounter++;
+        // Update global state if available
+        if (typeof global !== 'undefined' && global.__flowHubState) {
+            global.__flowHubState.pauseIdCounter = _pauseIdCounter;
+        }
         return `${prefix}-${Date.now()}-${_pauseIdCounter}`;
     }
 
@@ -107,7 +130,12 @@ const FlowHub = (function() {
                 const pauseId = customPauseId && !_pausedFlows.has(customPauseId) ? customPauseId : generatePauseId(flowInstanceId || 'flow');
 
                 if (_pausedFlows.has(pauseId)) {
+                    console.log(`[FlowHub] Warning: pauseId ${pauseId} already exists, using generated ID`);
                 }
+                
+                console.log(`[FlowHub] Creating pause with ID: ${pauseId} for flow: ${flowInstanceId}`);
+                console.log(`[FlowHub] Current paused flows count: ${_pausedFlows.size}`);
+                
                 _pausedFlows.set(pauseId, { resolve, details, flowInstanceId });
                 this._emitEvent('flowPaused', { pauseId, details, flowInstanceId });
             });

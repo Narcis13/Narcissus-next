@@ -6,9 +6,33 @@ import {
 } from "./types";
 import { BaseExecutionStrategy } from "./base-strategy";
 import { ExecutionPersistence } from "./persistence";
+import { flowHub } from "@/lib/flow-engine/singletons";
 
 export class ImmediateExecutionStrategy extends BaseExecutionStrategy {
   private executionTimeouts = new Map<string, NodeJS.Timeout>();
+  
+  private cleanupExecution(executionId: string, fm: any): void {
+    // Clear timeout if exists
+    const timeoutId = this.executionTimeouts.get(executionId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      this.executionTimeouts.delete(executionId);
+    }
+
+    // Clean up all event listeners
+    if ((fm as any)._eventHandlers) {
+      const { step, pause, resume, flowHub } = (fm as any)._eventHandlers;
+      if (flowHub && typeof flowHub.off === 'function') {
+        flowHub.off("flowManagerStep", step);
+        flowHub.off("flowPaused", pause);
+        flowHub.off("flowResumed", resume);
+        console.log('[ImmediateStrategy] Cleaned up all FlowHub listeners');
+      }
+    }
+
+    // Clean up active execution
+    this.activeExecutions.delete(executionId);
+  }
 
   async execute(
     workflow: any,
@@ -62,49 +86,77 @@ export class ImmediateExecutionStrategy extends BaseExecutionStrategy {
       // Log the result for debugging
       console.log('[ImmediateStrategy] Execution completed. Steps count:', result.steps?.length || 0);
 
-      // Clear timeout if exists
-      const timeoutId = this.executionTimeouts.get(executionId);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        this.executionTimeouts.delete(executionId);
+      // Check if there are active pauses for this execution
+      const activePauses = flowHub.getActivePauses();
+      const hasPauses = activePauses.some((pause: any) => pause.flowInstanceId === executionId);
+      
+      if (hasPauses) {
+        console.log(`[ImmediateStrategy] Execution ${executionId} has active pauses, keeping execution context`);
+        // Don't clean up if there are active pauses - wait for resume
+        // Update the execution status to indicate it's paused
+        await ExecutionPersistence.updateExecution(executionId, {
+          status: "paused",
+          metadata: {
+            ...context.metadata,
+            activePauses: activePauses.filter((p: any) => p.flowInstanceId === executionId)
+          }
+        });
+        
+        // Set up a listener for when the workflow actually completes
+        const endHandler = async (data: any) => {
+          if (data.flowInstanceId === executionId) {
+            console.log(`[ImmediateStrategy] Flow ended for ${executionId}, finalizing execution`);
+            // Remove listeners
+            flowHub.removeEventListener("flowEnd", endHandler);
+            flowHub.removeEventListener("flowManagerEnd", endHandler);
+            
+            try {
+              // Get the final result from FlowManager
+              const steps = fm.getSteps ? fm.getSteps() : [];
+              const stateManager = fm.getStateManager ? fm.getStateManager() : null;
+              const finalState = stateManager ? stateManager.getState() : {};
+              
+              const finalResult = {
+                executionId,
+                status: "completed" as const,
+                output: finalState,
+                completedAt: new Date(),
+                steps: steps
+              };
+              
+              // Now clean up
+              this.cleanupExecution(executionId, fm);
+              
+              // Update the stored result
+              await ExecutionPersistence.saveExecutionResult(finalResult);
+            } catch (error) {
+              console.error(`[ImmediateStrategy] Error completing execution ${executionId}:`, error);
+              this.cleanupExecution(executionId, fm);
+            }
+          }
+        };
+        
+        // Listen for both possible end events
+        flowHub.addEventListener("flowEnd", endHandler);
+        flowHub.addEventListener("flowManagerEnd", endHandler);
+        
+        return {
+          ...result,
+          status: "paused" as const,
+          metadata: {
+            ...result.metadata,
+            message: "Workflow paused, waiting for human input"
+          }
+        };
       }
 
-      // Clean up all event listeners
-      if ((fm as any)._eventHandlers) {
-        const { step, pause, resume, flowHub } = (fm as any)._eventHandlers;
-        if (flowHub && typeof flowHub.off === 'function') {
-          flowHub.off("flowManagerStep", step);
-          flowHub.off("flowPaused", pause);
-          flowHub.off("flowResumed", resume);
-          console.log('[ImmediateStrategy] Cleaned up all FlowHub listeners');
-        }
-      }
-
-      // Clean up
-      this.activeExecutions.delete(executionId);
+      // No pauses, clean up normally
+      this.cleanupExecution(executionId, fm);
 
       return result;
     } catch (error: any) {
-      // Clear timeout if exists
-      const timeoutId = this.executionTimeouts.get(executionId);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        this.executionTimeouts.delete(executionId);
-      }
-
-      // Clean up all event listeners
-      if ((fm as any)._eventHandlers) {
-        const { step, pause, resume, flowHub } = (fm as any)._eventHandlers;
-        if (flowHub && typeof flowHub.off === 'function') {
-          flowHub.off("flowManagerStep", step);
-          flowHub.off("flowPaused", pause);
-          flowHub.off("flowResumed", resume);
-          console.log('[ImmediateStrategy] Cleaned up all FlowHub listeners');
-        }
-      }
-
-      // Clean up
-      this.activeExecutions.delete(executionId);
+      // Clean up using the helper method
+      this.cleanupExecution(executionId, fm);
 
       await ExecutionPersistence.markExecutionAsFailed(
         executionId,
